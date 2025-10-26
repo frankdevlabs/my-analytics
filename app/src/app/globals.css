@@ -1,0 +1,275 @@
+@import "tailwindcss";
+
+/* ============================================
+   DESIGN TOKENS - Frank's Blog Color System
+   ============================================ */
+
+:root {
+  /* Light Mode Colors */
+  --background: #FEFBF4;  /* Cream/off-white background */
+  --foreground: #09192B;  /* Dark navy text */
+  --primary: #09192B;     /* Primary color for UI elements */
+  --accent: #D9BF65;      /* Golden yellow accent (consistent across modes) */
+
+  /* Derived Colors for Layering */
+  --surface: #F5F2EB;     /* Slightly darker than background for cards/elevated elements */
+  --border: rgba(9, 25, 43, 0.1);  /* Subtle borders using primary with opacity */
+
+  /* Text Colors */
+  --text: #09192B;        /* Primary text color */
+  --text-secondary: rgba(9, 25, 43, 0.7);  /* Secondary text with reduced opacity */
+
+  /* Button Colors */
+  --button-bg: #09192B;   /* Button background in light mode */
+  --button-text: #FEFBF4; /* Button text in light mode */
+
+  /* Component-specific Colors (for shadcn/ui compatibility) */
+  --card: #F5F2EB;
+  --card-foreground: #09192B;
+  --popover: #F5F2EB;
+  --popover-foreground: #09192B;
+  --secondary: #F5F2EB;
+  --secondary-foreground: #09192B;
+  --muted: #F5F2EB;
+  --muted-foreground: rgba(9, 25, 43, 0.7);
+  --destructive: #DC2626;
+  --destructive-foreground: #FEFBF4;
+  --input: #F5F2EB;
+  --ring: #D9BF65;
+
+  /* Chart Colors */
+  --chart-1: #09192B;
+  --chart-2: #D9BF65;
+  --chart-3: #6B7280;
+  --chart-4: #F59E0B;
+  --chart-5: #3B82F6;
+}
+
+/* Dark Mode Colors - Class-based for next-themes */
+.dark {
+  --background: #09192B;  /* Dark navy background */
+  --foreground: #FEFBF4;  /* Cream/off-white text */
+  --primary: #FEFBF4;     /* Primary color inverted */
+  --accent: #D9BF65;      /* Accent unchanged (consistent across modes) */
+
+  /* Derived Colors for Layering */
+  --surface: #0F1F35;     /* Slightly lighter than background for cards/elevated elements */
+  --border: rgba(254, 251, 244, 0.1);  /* Subtle borders using foreground with opacity */
+
+  /* Text Colors */
+  --text: #FEFBF4;        /* Primary text color */
+  --text-secondary: rgba(254, 251, 244, 0.7);  /* Secondary text with reduced opacity */
+
+  /* Button Colors */
+  --button-bg: #D9BF65;   /* Button background in dark mode (accent color) */
+  --button-text: #09192B; /* Button text in dark mode (dark navy) */
+
+  /* Component-specific Colors (for shadcn/ui compatibility) */
+  --card: #0F1F35;
+  --card-foreground: #FEFBF4;
+  --popover: #0F1F35;
+  --popover-foreground: #FEFBF4;
+  --secondary: #0F1F35;
+  --secondary-foreground: #FEFBF4;
+  --muted: #0F1F35;
+  --muted-foreground: rgba(254, 251, 244, 0.7);
+  --destructive: #EF4444;
+  --destructive-foreground: #FEFBF4;
+  --input: #0F1F35;
+  --ring: #D9BF65;
+
+  /* Chart Colors - Dark Mode */
+  --chart-1: #FEFBF4;
+  --chart-2: #D9BF65;
+  --chart-3: #9CA3AF;
+  --chart-4: #FBBF24;
+  --chart-5: #60A5FA;
+}
+
+/* ============================================
+   TAILWIND V4 THEME INTEGRATION
+   ============================================ */
+
+@theme inline {
+  /* Color Integration */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+
+  /* Typography - Font Families */
+  --font-heading: 'Ubuntu', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Courier New', monospace;
+  --font-sans: var(--font-raleway);  /* Default to Raleway for body */
+
+  /* Typography - Font Sizes (dashboard-optimized, NOT blog's 17.4rem scale) */
+  --font-size-xs: 0.75rem;    /* 12px - small labels, footnotes */
+  --font-size-sm: 0.875rem;   /* 14px - secondary text */
+  --font-size-base: 1rem;     /* 16px - body text */
+  --font-size-lg: 1.125rem;   /* 18px - emphasized text */
+  --font-size-xl: 1.25rem;    /* 20px - small headings */
+  --font-size-2xl: 1.5rem;    /* 24px - section headings */
+  --font-size-3xl: 1.875rem;  /* 30px - page titles */
+  --font-size-4xl: 2.25rem;   /* 36px - major headings */
+
+  /* Typography - Line Heights */
+  --line-height-tight: 1.25;   /* Dense data displays */
+  --line-height-normal: 1.5;   /* Standard body text */
+  --line-height-relaxed: 1.75; /* Long-form content */
+
+  /* Typography - Font Weights */
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* Spacing - Use Tailwind's default 4px/8px base unit system */
+  /* Tailwind defaults are already optimal, no override needed */
+
+  /* Border Radius - 4px default (minimal aesthetic) */
+  --radius-sm: 2px;
+  --radius: 4px;        /* Default border radius */
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+
+  /* Shadows - Minimal values following Frank's Blog */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+
+  /* Smooth transitions for theme switching (300ms) */
+  transition: background-color 300ms ease, color 300ms ease;
+}
+
+/* Heading Styles */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--foreground);
+}
+
+/* Focus Indicators - Visible with accent color */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   CUSTOM ANIMATIONS
+   ============================================ */
+
+/* Green pulse animation for active visitor badge */
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
+}
+
+.animate-pulse-green {
+  animation: pulse-green 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ============================================
+   REACT-DATEPICKER CUSTOM STYLES
+   Styled to match Frank's Blog aesthetic
+   ============================================ */
+
+/* Override default styles to match design system */
+.react-datepicker {
+  font-family: var(--font-body) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px !important;
+  background-color: var(--surface) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.react-datepicker__header {
+  background-color: var(--surface) !important;
+  border-bottom: 1px solid var(--border) !important;
+  padding-top: 8px !important;
+}
+
+.react-datepicker__current-month,
+.react-datepicker__day-name {
+  color: var(--foreground) !important;
+  font-weight: var(--font-weight-medium) !important;
+}
+
+.react-datepicker__day {
+  color: var(--foreground) !important;
+  border-radius: 4px !important;
+  transition: background-color 150ms ease !important;
+}
+
+.react-datepicker__day:hover {
+  background-color: rgba(217, 191, 101, 0.1) !important;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--in-range,
+.react-datepicker__day--in-selecting-range {
+  background-color: var(--accent) !important;
+  color: var(--background) !important;
+  font-weight: var(--font-weight-medium) !important;
+}
+
+.react-datepicker__day--keyboard-selected {
+  background-color: rgba(217, 191, 101, 0.2) !important;
+  color: var(--foreground) !important;
+}
+
+.react-datepicker__day--disabled {
+  color: var(--muted-foreground) !important;
+  opacity: 0.4 !important;
+}
+
+.react-datepicker__day--outside-month {
+  color: var(--muted-foreground) !important;
+}
+
+.react-datepicker__navigation {
+  top: 8px !important;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: var(--foreground) !important;
+}
+
+.react-datepicker__navigation:hover *::before {
+  border-color: var(--accent) !important;
+}
+
+/* Dark mode overrides */
+.dark .react-datepicker {
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+
+.dark .react-datepicker__header {
+  background-color: var(--surface) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+.dark .react-datepicker__day--selected,
+.dark .react-datepicker__day--in-range,
+.dark .react-datepicker__day--in-selecting-range {
+  background-color: var(--accent) !important;
+  color: var(--background) !important;
+}

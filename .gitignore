@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env*.local
+
+# Logs
+logs/
+*.log
+
+# Build output
+.next/
+out/
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+
+# Misc
+*.pem
+
+# TypeScript
+*.tsbuildinfo
+
+# Database backups
+*.sql
+*.dump
+*.backup
+backups/
+
+# Redis
+dump.rdb
+
+# Test artifacts
+test/
+
+# Development tools
+agent-os/
+.claude/
+.playwright/
+.playwright-mcp/
+
+# Data
+data/*
+!data/.gitkeep

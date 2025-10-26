@@ -1,0 +1,109 @@
+# Docker Compose for My Analytics Infrastructure Services
+# This file defines only the infrastructure services (PostgreSQL and Redis).
+# The Next.js app runs locally using: cd app && npm run dev
+
+version: '3.9'
+
+services:
+  # PostgreSQL 17.6 - Analytics Database
+  postgres:
+    image: postgres:17.6-alpine
+    container_name: my-analytics-postgres
+    restart: unless-stopped
+
+    environment:
+      # Database credentials
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+      # PostgreSQL configuration optimized for analytics workload
+      # Adjust based on your available system resources
+      POSTGRES_SHARED_BUFFERS: ${POSTGRES_SHARED_BUFFERS}
+      POSTGRES_EFFECTIVE_CACHE_SIZE: ${POSTGRES_EFFECTIVE_CACHE_SIZE}
+      POSTGRES_WORK_MEM: ${POSTGRES_WORK_MEM}
+      POSTGRES_MAINTENANCE_WORK_MEM: ${POSTGRES_MAINTENANCE_WORK_MEM}
+
+    ports:
+      - "${POSTGRES_PORT}:5432"
+
+    volumes:
+      # Persistent database storage
+      - postgres_data:/var/lib/postgresql/data
+
+      # Optional: Custom PostgreSQL configuration
+      # Uncomment and create postgresql.conf if needed
+      # - ./postgresql.conf:/etc/postgresql/postgresql.conf
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d my_analytics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    networks:
+      - my-analytics-network
+
+    # Resource limits (adjust based on your system)
+    deploy:
+      resources:
+        limits:
+          memory: ${POSTGRES_MEMORY_LIMIT}
+        reservations:
+          memory: ${POSTGRES_MEMORY_RESERVATION}
+
+  # Redis 7.4 - Session Tracking & Caching
+  redis:
+    image: redis:7.4-alpine
+    container_name: my-analytics-redis
+    restart: unless-stopped
+
+    command: >
+      redis-server
+      --maxmemory ${REDIS_MAXMEMORY}
+      --maxmemory-policy ${REDIS_MAXMEMORY_POLICY}
+      --appendonly ${REDIS_APPENDONLY}
+      --appendfsync ${REDIS_APPENDFSYNC}
+      --save ${REDIS_SAVE_INTERVAL}
+
+    ports:
+      - "${REDIS_PORT}:6379"
+
+    volumes:
+      # Persistent Redis data (AOF + RDB snapshots)
+      - redis_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+    networks:
+      - my-analytics-network
+
+    # Resource limits (adjust based on your system)
+    deploy:
+      resources:
+        limits:
+          memory: ${REDIS_MEMORY_LIMIT}
+        reservations:
+          memory: ${REDIS_MEMORY_RESERVATION}
+
+# Named volumes for data persistence
+volumes:
+  postgres_data:
+    driver: local
+    name: my-analytics-postgres-data
+
+  redis_data:
+    driver: local
+    name: my-analytics-redis-data
+
+# Custom network for service isolation
+networks:
+  my-analytics-network:
+    driver: bridge
+    name: my-analytics-network

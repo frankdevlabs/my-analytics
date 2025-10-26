@@ -1,0 +1,18 @@
+# Gatsby files
+.cache/
+public/
+
+# Dependencies
+node_modules/
+
+# Build output
+.DS_Store
+*.log
+
+# Environment variables
+.env*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
