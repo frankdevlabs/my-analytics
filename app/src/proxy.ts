@@ -33,7 +33,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Define public routes that don't require authentication
-  const publicRoutes = ['/login', '/api/track'];
+  const publicRoutes = ['/login', '/api/track', '/tracker.min.js'];
 
   // Check if current path is a public route
   const isPublicRoute = publicRoutes.some((route) =>
