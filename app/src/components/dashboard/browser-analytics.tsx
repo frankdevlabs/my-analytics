@@ -5,15 +5,16 @@
  * - Donut chart visualization
  * - Sortable data table with counts and percentages
  * - Loading, empty, and error state handling
+ * - All versions of the same browser are grouped together (no version numbers shown)
  *
  * @example
  * ```tsx
  * <BrowserAnalytics
  *   data={[
- *     { browser: 'Chrome 120', count: 3500, percentage: 43.75 },
- *     { browser: 'Safari 17', count: 2000, percentage: 25.0 },
- *     { browser: 'Firefox 121', count: 1500, percentage: 18.75 },
- *     { browser: 'Edge 120', count: 500, percentage: 6.25 },
+ *     { browser: 'Google Chrome', count: 3500, percentage: 43.75 },
+ *     { browser: 'Safari', count: 2000, percentage: 25.0 },
+ *     { browser: 'Firefox', count: 1500, percentage: 18.75 },
+ *     { browser: 'Microsoft Edge', count: 500, percentage: 6.25 },
  *     { browser: 'Unknown', count: 300, percentage: 3.75 },
  *     { browser: 'Other', count: 200, percentage: 2.5 }
  *   ]}
@@ -73,6 +74,7 @@ CustomTooltip.displayName = 'CustomTooltip';
  *
  * Renders browser breakdown with pie chart and sortable table.
  * Displays top 5 browsers plus "Other" category for remaining browsers.
+ * All versions of each browser are grouped together (e.g., "Google Chrome" includes all versions).
  * Handles loading skeleton, empty state, and error display.
  */
 export function BrowserAnalytics({

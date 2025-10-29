@@ -74,8 +74,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const compare = params.compare === 'true';
 
   // Convert to Date objects for database queries
+  // Set start date to beginning of day (00:00:00.000 UTC)
   const startDate = new Date(from);
+  // Set end date to end of day (23:59:59.999 UTC) to include all data for that day
   const endDate = new Date(to);
+  endDate.setUTCHours(23, 59, 59, 999);
 
   // Calculate previous period dates for comparison if enabled
   let previousStartDate: Date | null = null;
