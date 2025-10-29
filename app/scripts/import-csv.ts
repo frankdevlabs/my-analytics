@@ -229,7 +229,7 @@ async function importCsv(
         if (!validationResult.success) {
           // Collect validation error
           stats.failedCount++;
-          const errorMessage = validationResult.errors || 'Unknown validation error';
+          const errorMessage = validationResult.error || 'Unknown validation error';
           stats.validationErrors.push({
             rowNumber: currentRowNumber,
             error: errorMessage,
