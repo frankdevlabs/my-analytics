@@ -1,6 +1,6 @@
 /**
  * Custom Event Tracking API Endpoint
- * POST /api/track/event - Records custom events with metadata
+ * POST /api/metrics/event - Records custom events with metadata
  *
  * Features:
  * - Flexible event tracking with JSONB metadata storage
@@ -17,6 +17,7 @@ import { Prisma } from '@prisma/client';
 import { EventPayloadSchema } from 'lib/validation/event-schema';
 import { lookupCountryCode } from 'lib/geoip/maxmind-reader';
 import { prisma } from 'lib/db/prisma';
+import { getCorsHeaders } from 'lib/config/cors';
 
 /**
  * Extract IP address from request headers
@@ -41,23 +42,13 @@ function extractIpAddress(request: NextRequest): string {
 }
 
 /**
- * CORS headers for tracking endpoint
- * Only allows requests from franksblog.nl origin
- */
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://franksblog.nl',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Max-Age': '86400',
-};
-
-/**
  * Handle OPTIONS preflight requests for CORS
  */
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
+  const corsHeaders = getCorsHeaders(request);
   return new NextResponse(null, {
     status: 204,
-    headers: CORS_HEADERS,
+    headers: corsHeaders,
   });
 }
 
@@ -65,6 +56,9 @@ export async function OPTIONS() {
  * Handle POST requests to record custom events
  */
 export async function POST(request: NextRequest) {
+  // Get CORS headers based on request origin
+  const corsHeaders = getCorsHeaders(request);
+
   try {
     // Parse request body
     const body = await request.json();
@@ -86,7 +80,7 @@ export async function POST(request: NextRequest) {
         },
         {
           status: 400,
-          headers: CORS_HEADERS,
+          headers: corsHeaders,
         }
       );
     }
@@ -145,7 +139,7 @@ export async function POST(request: NextRequest) {
         },
         {
           status: 500,
-          headers: CORS_HEADERS,
+          headers: corsHeaders,
         }
       );
     }
@@ -153,7 +147,7 @@ export async function POST(request: NextRequest) {
     // Return 204 No Content on success
     return new NextResponse(null, {
       status: 204,
-      headers: CORS_HEADERS,
+      headers: corsHeaders,
     });
   } catch (error) {
     // Log error for debugging
@@ -167,7 +161,7 @@ export async function POST(request: NextRequest) {
       },
       {
         status: 500,
-        headers: CORS_HEADERS,
+        headers: corsHeaders,
       }
     );
   }

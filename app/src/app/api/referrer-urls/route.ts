@@ -53,6 +53,8 @@ export async function GET(request: NextRequest) {
     // Parse and validate dates
     const startDate = new Date(from);
     const endDate = new Date(to);
+    // Set end date to end of day (23:59:59.999 UTC) to include all data for that day
+    endDate.setUTCHours(23, 59, 59, 999);
 
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       return NextResponse.json(

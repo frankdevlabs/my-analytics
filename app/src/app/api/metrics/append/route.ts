@@ -1,6 +1,6 @@
 /**
  * Analytics Append API Endpoint
- * POST /api/track/append - Updates existing pageview with duration and scroll data
+ * POST /api/metrics/append - Updates existing pageview with duration and scroll data
  *
  * Features:
  * - Updates duration_seconds and scrolled_percentage for existing pageviews
@@ -14,25 +14,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AppendPayloadSchema } from 'lib/validation/append-schema';
 import { prisma } from 'lib/db/prisma';
-
-/**
- * CORS headers for tracking endpoint
- * Only allows requests from franksblog.nl origin
- */
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://franksblog.nl',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Max-Age': '86400',
-};
+import { getCorsHeaders } from 'lib/config/cors';
 
 /**
  * Handle OPTIONS preflight requests for CORS
  */
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
+  const corsHeaders = getCorsHeaders(request);
   return new NextResponse(null, {
     status: 204,
-    headers: CORS_HEADERS,
+    headers: corsHeaders,
   });
 }
 
@@ -41,6 +32,9 @@ export async function OPTIONS() {
  * Updates duration_seconds, scrolled_percentage, and time_on_page_seconds
  */
 export async function POST(request: NextRequest) {
+  // Get CORS headers based on request origin
+  const corsHeaders = getCorsHeaders(request);
+
   try {
     // Parse request body
     const body = await request.json();
@@ -62,7 +56,7 @@ export async function POST(request: NextRequest) {
         },
         {
           status: 400,
-          headers: CORS_HEADERS,
+          headers: corsHeaders,
         }
       );
     }
@@ -111,7 +105,7 @@ export async function POST(request: NextRequest) {
           },
           {
             status: 404,
-            headers: CORS_HEADERS,
+            headers: corsHeaders,
           }
         );
       }
@@ -125,7 +119,7 @@ export async function POST(request: NextRequest) {
         },
         {
           status: 500,
-          headers: CORS_HEADERS,
+          headers: corsHeaders,
         }
       );
     }
@@ -133,7 +127,7 @@ export async function POST(request: NextRequest) {
     // Return 204 No Content on success
     return new NextResponse(null, {
       status: 204,
-      headers: CORS_HEADERS,
+      headers: corsHeaders,
     });
   } catch (error) {
     // Log error for debugging
@@ -147,7 +141,7 @@ export async function POST(request: NextRequest) {
       },
       {
         status: 500,
-        headers: CORS_HEADERS,
+        headers: corsHeaders,
       }
     );
   }
