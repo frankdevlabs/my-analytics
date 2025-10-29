@@ -12,7 +12,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { parse } from 'csv-parse';
-import { mapCsvRowToPageview, MappedPageview } from '../../lib/import/field-mapper';
+import { mapCsvRowToPageview } from '../../lib/import/field-mapper';
 import { validateCsvPageview } from '../../lib/import/validation-adapter';
 import { insertPageviewBatch } from '../../lib/import/batch-inserter';
 import { prisma } from '../../lib/db/prisma';
@@ -37,7 +37,7 @@ describe('CSV Import Performance Tests', () => {
 
   it('should import 1,000 rows within performance target (< 1 minute)', async () => {
     const csvPath = path.join(fixturesDir, 'performance-1000-rows.csv');
-    const validRows: MappedPageview[] = [];
+    const validRows: any[] = [];
     const BATCH_SIZE = 100;
     let totalRows = 0;
     let batchCount = 0;
@@ -49,7 +49,7 @@ describe('CSV Import Performance Tests', () => {
 
     // Parse and validate CSV in batches
     await new Promise((resolve, reject) => {
-      let currentBatch: MappedPageview[] = [];
+      let currentBatch: any[] = [];
 
       fs.createReadStream(csvPath)
         .pipe(parse({
@@ -110,7 +110,7 @@ describe('CSV Import Performance Tests', () => {
     const csvPath = path.join(fixturesDir, 'performance-1000-rows.csv');
     const BATCH_SIZE = 100;
     let totalRows = 0;
-    let currentBatch: MappedPageview[] = [];
+    let currentBatch: any[] = [];
 
     // Mock successful database inserts
     (prisma.$transaction as jest.Mock).mockResolvedValue(Array(BATCH_SIZE).fill({}));
@@ -193,7 +193,7 @@ describe('CSV Import Performance Tests', () => {
 
     // Parse and validate CSV in batches, taking memory snapshots
     await new Promise((resolve, reject) => {
-      let currentBatch: MappedPageview[] = [];
+      let currentBatch: any[] = [];
 
       fs.createReadStream(csvPath)
         .pipe(parse({

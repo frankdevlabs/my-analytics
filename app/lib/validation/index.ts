@@ -19,3 +19,7 @@ export {
   EventPayloadSchema,
   type EventPayload,
 } from './event-schema';
+
+export {
+  type ValidationResult,
+} from './validation-types';

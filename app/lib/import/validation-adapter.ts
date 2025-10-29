@@ -9,15 +9,7 @@
 import { PageviewPayloadSchema, PageviewPayload } from '../validation/pageview-schema';
 import { MappedPageview } from './field-mapper';
 import { ZodError } from 'zod';
-
-/**
- * Validation result structure
- */
-export interface ValidationResult {
-  success: boolean;
-  data?: PageviewPayload;
-  errors?: string;
-}
+import { ValidationResult } from '../validation/validation-types';
 
 /**
  * Validates a mapped CSV pageview record using the existing pageviewSchema
@@ -30,14 +22,14 @@ export interface ValidationResult {
  * @param data - Mapped pageview data from CSV field mapper
  * @returns ValidationResult with success status, validated data, or error details
  */
-export function validateCsvPageview(data: MappedPageview): ValidationResult {
+export function validateCsvPageview(data: MappedPageview): ValidationResult<PageviewPayload> {
   // Pre-validate critical fields for fast-fail behavior
   const criticalErrors = validateCriticalFields(data);
 
   if (criticalErrors.length > 0) {
     return {
       success: false,
-      errors: formatCriticalFieldErrors(criticalErrors),
+      error: formatCriticalFieldErrors(criticalErrors),
     };
   }
 
@@ -54,7 +46,7 @@ export function validateCsvPageview(data: MappedPageview): ValidationResult {
   // Format Zod validation errors for logging
   return {
     success: false,
-    errors: formatZodErrors(result.error),
+    error: formatZodErrors(result.error),
   };
 }
 

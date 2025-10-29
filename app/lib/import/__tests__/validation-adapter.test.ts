@@ -48,8 +48,9 @@ describe('validateCsvPageview', () => {
     const result = validateCsvPageview(validPageview);
 
     expect(result.success).toBe(true);
-    expect(result.data).toBeDefined();
-    expect(result.errors).toBeUndefined();
+    if (result.success) {
+      expect(result.data).toBeDefined();
+    }
   });
 
   it('should reject pageview with invalid added_iso timestamp', () => {
@@ -69,8 +70,10 @@ describe('validateCsvPageview', () => {
     const result = validateCsvPageview(invalidPageview);
 
     expect(result.success).toBe(false);
-    expect(result.errors).toBeDefined();
-    expect(result.errors).toContain('added_iso');
+    if (!result.success) {
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('added_iso');
+    }
   });
 
   it('should reject pageview with invalid path (not starting with /)', () => {
@@ -90,8 +93,10 @@ describe('validateCsvPageview', () => {
     const result = validateCsvPageview(invalidPageview);
 
     expect(result.success).toBe(false);
-    expect(result.errors).toBeDefined();
-    expect(result.errors).toContain('path');
+    if (!result.success) {
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('path');
+    }
   });
 
   it('should reject pageview with empty path', () => {
@@ -111,8 +116,10 @@ describe('validateCsvPageview', () => {
     const result = validateCsvPageview(invalidPageview);
 
     expect(result.success).toBe(false);
-    expect(result.errors).toBeDefined();
-    expect(result.errors).toContain('path');
+    if (!result.success) {
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('path');
+    }
   });
 
   it('should reject pageview with invalid page_id (not CUID format)', () => {
@@ -132,8 +139,10 @@ describe('validateCsvPageview', () => {
     const result = validateCsvPageview(invalidPageview);
 
     expect(result.success).toBe(false);
-    expect(result.errors).toBeDefined();
-    expect(result.errors).toContain('page_id');
+    if (!result.success) {
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('page_id');
+    }
   });
 
   it('should accept pageview with only required fields', () => {
@@ -153,7 +162,9 @@ describe('validateCsvPageview', () => {
     const result = validateCsvPageview(minimalPageview);
 
     expect(result.success).toBe(true);
-    expect(result.data).toBeDefined();
+    if (result.success) {
+      expect(result.data).toBeDefined();
+    }
   });
 
   it('should accept pageview with empty user_agent for historical CSV imports', () => {
@@ -173,8 +184,10 @@ describe('validateCsvPageview', () => {
     const result = validateCsvPageview(pageviewWithEmptyUA);
 
     expect(result.success).toBe(true);
-    expect(result.data).toBeDefined();
-    expect(result.data?.user_agent).toBe('');
+    if (result.success) {
+      expect(result.data).toBeDefined();
+      expect(result.data.user_agent).toBe('');
+    }
   });
 
   it('should return multiple validation errors for multiple invalid fields', () => {
@@ -194,8 +207,10 @@ describe('validateCsvPageview', () => {
     const result = validateCsvPageview(invalidPageview);
 
     expect(result.success).toBe(false);
-    expect(result.errors).toBeDefined();
-    expect(result.errors!.length).toBeGreaterThan(1);
+    if (!result.success) {
+      expect(result.error).toBeDefined();
+      expect(result.error.length).toBeGreaterThan(1);
+    }
   });
 });
 
