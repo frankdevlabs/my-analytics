@@ -13,7 +13,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { parse } from 'csv-parse';
-import { mapCsvRowToPageview, MappedPageview } from '../../lib/import/field-mapper';
+import { mapCsvRowToPageview } from '../../lib/import/field-mapper';
 import { validateCsvPageview } from '../../lib/import/validation-adapter';
 import { insertPageviewBatch } from '../../lib/import/batch-inserter';
 import { LogManager } from '../../lib/import/log-manager';
@@ -55,7 +55,7 @@ describe('CSV Import Integration Tests', () => {
 
   it('should import small CSV with all valid data (10 rows)', async () => {
     const csvPath = path.join(fixturesDir, 'valid-10-rows.csv');
-    const validRows: MappedPageview[] = [];
+    const validRows: any[] = [];
     let totalRows = 0;
 
     // Mock successful database insert
@@ -75,7 +75,7 @@ describe('CSV Import Integration Tests', () => {
           if (row.datapoint === 'pageview') {
             const mapped = mapCsvRowToPageview(row);
             const validation = validateCsvPageview(mapped.data);
-            if (validation.success && validation.data) {
+            if (validation.success) {
               validRows.push(validation.data);
             }
           }
@@ -96,7 +96,7 @@ describe('CSV Import Integration Tests', () => {
 
   it('should import CSV with mix of valid and invalid rows', async () => {
     const csvPath = path.join(fixturesDir, 'mixed-valid-invalid.csv');
-    const validRows: MappedPageview[] = [];
+    const validRows: any[] = [];
     const invalidRows: Record<string, unknown>[] = [];
     let totalRows = 0;
 
@@ -116,11 +116,11 @@ describe('CSV Import Integration Tests', () => {
           totalRows++;
           if (row.datapoint === 'pageview') {
             const mapped = mapCsvRowToPageview(row);
-            const validation = validateCsvPageview(mapped);
-            if (validation.success && validation.data) {
+            const validation = validateCsvPageview(mapped.data);
+            if (validation.success) {
               validRows.push(validation.data);
             } else {
-              invalidRows.push({ row: totalRows, errors: validation.errors });
+              invalidRows.push({ row: totalRows, errors: validation.error });
             }
           }
         })
@@ -140,7 +140,7 @@ describe('CSV Import Integration Tests', () => {
 
   it('should import CSV with missing optional fields', async () => {
     const csvPath = path.join(fixturesDir, 'missing-optional-fields.csv');
-    const validRows: MappedPageview[] = [];
+    const validRows: any[] = [];
     let totalRows = 0;
 
     // Mock successful database insert
@@ -164,6 +164,7 @@ describe('CSV Import Integration Tests', () => {
               expect(validation.data.duration_seconds).toBe(0); // Default value
               expect(validation.data.is_unique).toBe(false); // Default value
               expect(validation.data.visibility_changes).toBe(0); // Default value
+              validRows.push(validation.data);
             }
           }
         })
@@ -181,7 +182,7 @@ describe('CSV Import Integration Tests', () => {
 
   it('should handle CSV with malformed data types', async () => {
     const csvPath = path.join(fixturesDir, 'malformed-data.csv');
-    const validRows: MappedPageview[] = [];
+    const validRows: any[] = [];
     const invalidRows: Record<string, unknown>[] = [];
     let totalRows = 0;
 
@@ -199,10 +200,10 @@ describe('CSV Import Integration Tests', () => {
           if (row.datapoint === 'pageview') {
             const mapped = mapCsvRowToPageview(row);
             const validation = validateCsvPageview(mapped.data);
-            if (validation.success && validation.data) {
+            if (validation.success) {
               validRows.push(validation.data);
             } else {
-              invalidRows.push({ row: totalRows, errors: validation.errors });
+              invalidRows.push({ row: totalRows, errors: validation.error });
             }
           }
         })
@@ -218,7 +219,7 @@ describe('CSV Import Integration Tests', () => {
   it('should verify database records match CSV source data', async () => {
     const csvPath = path.join(fixturesDir, 'valid-10-rows.csv');
     const sourceRows: Record<string, unknown>[] = [];
-    const validRows: MappedPageview[] = [];
+    const validRows: any[] = [];
 
     // Mock successful database insert
     (prisma.$transaction as jest.Mock).mockResolvedValue(Array(10).fill({}));
@@ -237,7 +238,7 @@ describe('CSV Import Integration Tests', () => {
             sourceRows.push(row);
             const mapped = mapCsvRowToPageview(row);
             const validation = validateCsvPageview(mapped.data);
-            if (validation.success && validation.data) {
+            if (validation.success) {
               validRows.push(validation.data);
             }
           }
@@ -273,7 +274,7 @@ describe('CSV Import Integration Tests', () => {
       successCount: 95,
       failedCount: 5,
       durationMs: 5000,
-    });
+      skippedCount: 0,    });
 
     logManager.close();
 
@@ -300,7 +301,7 @@ describe('CSV Import Integration Tests', () => {
 
   it('should handle empty CSV file gracefully', async () => {
     const csvPath = path.join(fixturesDir, 'empty.csv');
-    const validRows: MappedPageview[] = [];
+    const validRows: any[] = [];
     let totalRows = 0;
 
     // Parse CSV
@@ -317,7 +318,7 @@ describe('CSV Import Integration Tests', () => {
           if (row.datapoint === 'pageview') {
             const mapped = mapCsvRowToPageview(row);
             const validation = validateCsvPageview(mapped.data);
-            if (validation.success && validation.data) {
+            if (validation.success) {
               validRows.push(validation.data);
             }
           }
@@ -337,7 +338,7 @@ describe('CSV Import Integration Tests', () => {
 
   it('should handle CSV with only headers (no data rows)', async () => {
     const csvPath = path.join(fixturesDir, 'headers-only.csv');
-    const validRows: MappedPageview[] = [];
+    const validRows: any[] = [];
     let totalRows = 0;
 
     // Parse CSV
@@ -354,7 +355,7 @@ describe('CSV Import Integration Tests', () => {
           if (row.datapoint === 'pageview') {
             const mapped = mapCsvRowToPageview(row);
             const validation = validateCsvPageview(mapped.data);
-            if (validation.success && validation.data) {
+            if (validation.success) {
               validRows.push(validation.data);
             }
           }
@@ -374,7 +375,7 @@ describe('CSV Import Integration Tests', () => {
 
   it('should handle CSV with all invalid rows', async () => {
     const csvPath = path.join(fixturesDir, 'all-invalid-rows.csv');
-    const validRows: MappedPageview[] = [];
+    const validRows: any[] = [];
     const invalidRows: Record<string, unknown>[] = [];
     let totalRows = 0;
 
@@ -392,10 +393,10 @@ describe('CSV Import Integration Tests', () => {
           if (row.datapoint === 'pageview') {
             const mapped = mapCsvRowToPageview(row);
             const validation = validateCsvPageview(mapped.data);
-            if (validation.success && validation.data) {
+            if (validation.success) {
               validRows.push(validation.data);
             } else {
-              invalidRows.push({ row: totalRows, errors: validation.errors });
+              invalidRows.push({ row: totalRows, errors: validation.error });
             }
           }
         })
@@ -415,7 +416,7 @@ describe('CSV Import Integration Tests', () => {
 
   it('should handle CSV with special characters in text fields', async () => {
     const csvPath = path.join(fixturesDir, 'special-characters.csv');
-    const validRows: MappedPageview[] = [];
+    const validRows: any[] = [];
     let totalRows = 0;
 
     // Mock successful database insert
@@ -436,7 +437,7 @@ describe('CSV Import Integration Tests', () => {
           if (row.datapoint === 'pageview') {
             const mapped = mapCsvRowToPageview(row);
             const validation = validateCsvPageview(mapped.data);
-            if (validation.success && validation.data) {
+            if (validation.success) {
               validRows.push(validation.data);
             }
           }

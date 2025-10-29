@@ -24,7 +24,7 @@
  * processes batches sequentially, so this limitation is acceptable.
  */
 
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, DeviceType } from '@prisma/client';
 import { insertPageviewBatch } from '../../lib/import/batch-inserter';
 import { mapCsvRowToPageview } from '../../lib/import/field-mapper';
 import { validateCsvPageview } from '../../lib/import/validation-adapter';
@@ -106,7 +106,7 @@ describe('CSV Import Duplicate Handling Integration Tests', () => {
     const validRows = csvRows
       .map(row => mapCsvRowToPageview(row).data) // Extract .data from MappedPageviewWithMeta
       .map(mapped => validateCsvPageview(mapped))
-      .filter(validation => validation.success)
+      .filter((validation): validation is { success: true; data: any } => validation.success)
       .map(validation => validation.data);
 
     // Insert batch
@@ -173,7 +173,7 @@ describe('CSV Import Duplicate Handling Integration Tests', () => {
     const validRows = csvRows
       .map(row => mapCsvRowToPageview(row).data) // Extract .data from MappedPageviewWithMeta
       .map(mapped => validateCsvPageview(mapped))
-      .filter(validation => validation.success)
+      .filter((validation): validation is { success: true; data: any } => validation.success)
       .map(validation => validation.data);
 
     // First import - should succeed
@@ -238,7 +238,7 @@ describe('CSV Import Duplicate Handling Integration Tests', () => {
     const batch1ValidRows = batch1Rows
       .map(row => mapCsvRowToPageview(row).data) // Extract .data from MappedPageviewWithMeta
       .map(mapped => validateCsvPageview(mapped))
-      .filter(validation => validation.success)
+      .filter((validation): validation is { success: true; data: any } => validation.success)
       .map(validation => validation.data);
 
     const result1 = await insertPageviewBatch(batch1ValidRows, 1);
@@ -288,7 +288,7 @@ describe('CSV Import Duplicate Handling Integration Tests', () => {
     const batch2ValidRows = batch2Rows
       .map(row => mapCsvRowToPageview(row).data) // Extract .data from MappedPageviewWithMeta
       .map(mapped => validateCsvPageview(mapped))
-      .filter(validation => validation.success)
+      .filter((validation): validation is { success: true; data: any } => validation.success)
       .map(validation => validation.data);
 
     const result2 = await insertPageviewBatch(batch2ValidRows, 2);
@@ -363,7 +363,7 @@ describe('CSV Import Duplicate Handling Integration Tests', () => {
     const validRows = csvRows
       .map(row => mapCsvRowToPageview(row).data) // Extract .data from MappedPageviewWithMeta
       .map(mapped => validateCsvPageview(mapped))
-      .filter(validation => validation.success)
+      .filter((validation): validation is { success: true; data: any } => validation.success)
       .map(validation => validation.data);
 
     await insertPageviewBatch(validRows, 1);
@@ -446,7 +446,7 @@ describe('CSV Import Duplicate Handling Integration Tests', () => {
     const validRows = pageviewRows
       .map(row => mapCsvRowToPageview(row).data) // Extract .data from MappedPageviewWithMeta
       .map(mapped => validateCsvPageview(mapped))
-      .filter(validation => validation.success)
+      .filter((validation): validation is { success: true; data: any } => validation.success)
       .map(validation => validation.data);
 
     const result = await insertPageviewBatch(validRows, 1);
@@ -493,8 +493,11 @@ describe('CSV Import Duplicate Handling Integration Tests', () => {
     };
 
     const mappedResult = mapCsvRowToPageview(csvRow);
-    const validation = validateCsvPageview(mappedResult.data); // Extract .data from MappedPageviewWithMeta
-    expect(validation.success).toBe(true);
+    const validation = validateCsvPageview(mappedResult.data);
+
+    if (!validation.success) {
+      throw new Error('Validation should have succeeded');
+    }
 
     const result = await insertPageviewBatch([validation.data], 1);
     expect(result.insertedCount).toBe(1);
@@ -505,7 +508,7 @@ describe('CSV Import Duplicate Handling Integration Tests', () => {
       path: '/constraint-test',
       session_id: 'constraint-session',
       hostname: 'test-csv-import.com',
-      device_type: 'desktop' as Prisma.DeviceType,
+      device_type: DeviceType.desktop,
       duration_seconds: 25, // Different value
       user_agent: 'Different Agent', // Different value
       is_unique: false, // Different value
@@ -572,7 +575,7 @@ describe('CSV Import Duplicate Handling Integration Tests', () => {
     const validRows = csvRows
       .map(row => mapCsvRowToPageview(row).data) // Extract .data from MappedPageviewWithMeta
       .map(mapped => validateCsvPageview(mapped))
-      .filter(validation => validation.success)
+      .filter((validation): validation is { success: true; data: any } => validation.success)
       .map(validation => validation.data);
 
     const result = await insertPageviewBatch(validRows, 1);
@@ -644,7 +647,7 @@ describe('CSV Import Duplicate Handling Integration Tests', () => {
     const validRows = csvRows
       .map(row => mapCsvRowToPageview(row).data) // Extract .data from MappedPageviewWithMeta
       .map(mapped => validateCsvPageview(mapped))
-      .filter(validation => validation.success)
+      .filter((validation): validation is { success: true; data: any } => validation.success)
       .map(validation => validation.data);
 
     const result = await insertPageviewBatch(validRows, 1);

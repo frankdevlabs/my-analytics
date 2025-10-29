@@ -7,7 +7,7 @@
  * These are database integration tests that verify the constraint behavior
  */
 
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, DeviceType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -46,7 +46,7 @@ describe('Pageview Composite Unique Constraint', () => {
       path: '/test-duplicate',
       session_id: 'session-duplicate-test',
       hostname: 'test-constraint.com',
-      device_type: 'desktop' as Prisma.DeviceType,
+      device_type: DeviceType.desktop,
       duration_seconds: 10,
       user_agent: 'Test Agent',
       is_unique: false,
@@ -95,7 +95,7 @@ describe('Pageview Composite Unique Constraint', () => {
       path: '/test-null-session',
       session_id: null,
       hostname: 'test-null-session.com',
-      device_type: 'desktop' as Prisma.DeviceType,
+      device_type: DeviceType.desktop,
       duration_seconds: 15,
       user_agent: 'Test Agent',
       is_unique: false,
@@ -132,7 +132,7 @@ describe('Pageview Composite Unique Constraint', () => {
       added_iso: testDate,
       path: '/test-different-session',
       hostname: 'test-different-session.com',
-      device_type: 'desktop' as Prisma.DeviceType,
+      device_type: DeviceType.desktop,
       duration_seconds: 20,
       user_agent: 'Test Agent',
       is_unique: false,
@@ -188,7 +188,7 @@ describe('Pageview Composite Unique Constraint', () => {
         path: '/test-page-id',
         session_id: 'session-page-id-test',
         hostname: 'test-constraint.com',
-        device_type: 'mobile' as Prisma.DeviceType,
+        device_type: DeviceType.mobile,
         duration_seconds: 5,
         user_agent: 'Test Agent',
         is_unique: false,
@@ -201,24 +201,142 @@ describe('Pageview Composite Unique Constraint', () => {
     expect(firstPageview.page_id).toBeDefined();
 
     // Attempt to create another pageview with the same page_id but different composite key
-    // This should fail due to page_id unique constraint
+    const duplicatePageIdData = {
+      page_id: firstPageview.page_id,
+      added_iso: new Date('2025-10-25T14:00:00.000Z'), // Different timestamp
+      path: '/test-different-page', // Different path
+      session_id: 'session-different-test', // Different session
+      hostname: 'test-constraint.com',
+      device_type: DeviceType.mobile,
+      duration_seconds: 10,
+      user_agent: 'Test Agent',
+      is_unique: false,
+      is_bot: false,
+      is_internal_referrer: false,
+      visibility_changes: 0
+    };
+
+    // Should fail with P2002 unique constraint violation on page_id
     await expect(
       prisma.pageview.create({
-        data: {
-          added_iso: new Date('2025-10-25T14:00:00.000Z'), // Different time
-          path: '/different-path', // Different path
-          session_id: 'different-session', // Different session
-          hostname: 'different-host.com', // Different hostname
-          page_id: firstPageview.page_id, // Same page_id
-          device_type: 'tablet' as Prisma.DeviceType,
-          duration_seconds: 8,
-          user_agent: 'Test Agent',
-          is_unique: false,
-          is_bot: false,
-          is_internal_referrer: false,
-          visibility_changes: 0
-        }
+        data: duplicatePageIdData
       })
-    ).rejects.toThrow();
+    ).rejects.toThrow(/Unique constraint failed/);
+
+    try {
+      await prisma.pageview.create({
+        data: duplicatePageIdData
+      });
+      fail('Should have thrown P2002 error');
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        expect(error.code).toBe('P2002');
+      }
+    }
+  });
+
+  /**
+   * Test 5: Verify that changing any field in the composite key allows insertion
+   * Tests that ALL four fields (added_iso, path, session_id, hostname) must match for a duplicate
+   */
+  it('should allow insertion when any composite key field differs', async () => {
+    const baseDate = new Date('2025-10-25T15:00:00.000Z');
+    const basePath = '/test-composite-variance';
+    const baseSessionId = 'session-variance-test';
+    const baseHostname = 'test-constraint.com';
+
+    // Insert base record
+    await prisma.pageview.create({
+      data: {
+        added_iso: baseDate,
+        path: basePath,
+        session_id: baseSessionId,
+        hostname: baseHostname,
+        device_type: DeviceType.desktop,
+        duration_seconds: 10,
+        user_agent: 'Test Agent',
+        is_unique: false,
+        is_bot: false,
+        is_internal_referrer: false,
+        visibility_changes: 0
+      }
+    });
+
+    // Different added_iso - should succeed
+    const diffDate = await prisma.pageview.create({
+      data: {
+        added_iso: new Date('2025-10-25T15:01:00.000Z'), // Different
+        path: basePath,
+        session_id: baseSessionId,
+        hostname: baseHostname,
+        device_type: DeviceType.desktop,
+        duration_seconds: 10,
+        user_agent: 'Test Agent',
+        is_unique: false,
+        is_bot: false,
+        is_internal_referrer: false,
+        visibility_changes: 0
+      }
+    });
+    expect(diffDate.id).toBeDefined();
+
+    // Different path - should succeed
+    const diffPath = await prisma.pageview.create({
+      data: {
+        added_iso: baseDate,
+        path: '/test-composite-variance-different', // Different
+        session_id: baseSessionId,
+        hostname: baseHostname,
+        device_type: DeviceType.desktop,
+        duration_seconds: 10,
+        user_agent: 'Test Agent',
+        is_unique: false,
+        is_bot: false,
+        is_internal_referrer: false,
+        visibility_changes: 0
+      }
+    });
+    expect(diffPath.id).toBeDefined();
+
+    // Different session_id - should succeed
+    const diffSession = await prisma.pageview.create({
+      data: {
+        added_iso: baseDate,
+        path: basePath,
+        session_id: 'session-variance-test-different', // Different
+        hostname: baseHostname,
+        device_type: DeviceType.desktop,
+        duration_seconds: 10,
+        user_agent: 'Test Agent',
+        is_unique: false,
+        is_bot: false,
+        is_internal_referrer: false,
+        visibility_changes: 0
+      }
+    });
+    expect(diffSession.id).toBeDefined();
+
+    // Different hostname - should succeed
+    const diffHostname = await prisma.pageview.create({
+      data: {
+        added_iso: baseDate,
+        path: basePath,
+        session_id: baseSessionId,
+        hostname: 'test-constraint-different.com', // Different
+        device_type: DeviceType.desktop,
+        duration_seconds: 10,
+        user_agent: 'Test Agent',
+        is_unique: false,
+        is_bot: false,
+        is_internal_referrer: false,
+        visibility_changes: 0
+      }
+    });
+    expect(diffHostname.id).toBeDefined();
+
+    // Verify all records exist
+    expect(diffDate.id).not.toBe(diffPath.id);
+    expect(diffPath.id).not.toBe(diffSession.id);
+    expect(diffSession.id).not.toBe(diffHostname.id);
   });
 });
