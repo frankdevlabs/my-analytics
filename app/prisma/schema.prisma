@@ -49,7 +49,6 @@ model Pageview {
   browser_major_version String?    @db.VarChar(10)
   events                Event[]
 
-  @@unique([added_iso, path, session_id, hostname], name: "pageviews_unique_composite", map: "pageviews_unique_composite")
   @@index([added_iso], map: "idx_pageviews_timestamp")
   @@index([path, added_iso], map: "idx_pageviews_path_timestamp")
   @@index([country_code, added_iso], map: "idx_pageviews_country_timestamp")

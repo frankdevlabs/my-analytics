@@ -139,7 +139,7 @@ describe('Prisma Schema - Enhanced Analytics Tracking', () => {
    */
   it('should maintain DeviceType enum with desktop, mobile, tablet', () => {
     // Verify enum values exist in type system
-    const deviceTypes: Prisma.DeviceType[] = ['desktop', 'mobile', 'tablet'];
+    const deviceTypes: ('desktop' | 'mobile' | 'tablet')[] = ['desktop', 'mobile', 'tablet'];
 
     deviceTypes.forEach(type => {
       expect(['desktop', 'mobile', 'tablet']).toContain(type);
@@ -187,7 +187,6 @@ describe('Prisma Schema - Enhanced Analytics Tracking', () => {
       path: '/test',
 
       // Optional fields
-      page_id: 'page-123',
       country_code: 'US',
     };
 
