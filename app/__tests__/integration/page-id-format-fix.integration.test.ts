@@ -11,6 +11,7 @@
  * Task Group 4: Integration Testing for page_id format fix
  */
 
+import { NextRequest } from 'next/server';
 import { POST as trackPost } from '../../src/app/api/track/route';
 import { POST as appendPost } from '../../src/app/api/track/append/route';
 import { POST as eventPost } from '../../src/app/api/track/event/route';
@@ -67,21 +68,17 @@ describe('Page ID Format Fix - Integration Tests', () => {
   });
 
   const createMockRequest = (body: Record<string, unknown>, headers: Record<string, string> = {}) => {
-    const bodyString = JSON.stringify(body);
-    return {
+    const allHeaders: Record<string, string> = {
+      'content-type': 'application/json',
+      'x-forwarded-for': '8.8.8.8',
+      ...headers,
+    };
+
+    return new NextRequest('http://localhost:3000/api/test', {
       method: 'POST',
-      headers: {
-        get: (key: string) => {
-          const allHeaders: Record<string, string> = {
-            'content-type': 'application/json',
-            'x-forwarded-for': '8.8.8.8',
-            ...headers,
-          };
-          return allHeaders[key.toLowerCase()] || null;
-        },
-      },
-      json: async () => JSON.parse(bodyString),
-    } as unknown as Request;
+      body: JSON.stringify(body),
+      headers: allHeaders,
+    });
   };
 
   describe('End-to-End Tracking with CUID2 page_id', () => {

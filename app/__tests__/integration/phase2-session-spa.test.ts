@@ -16,6 +16,7 @@
 
 import { getOrCreateSession, updateSession, SessionMetadata } from '../../lib/session/session-storage';
 import { getRedisClient } from '../../lib/redis';
+import { RedisClientType } from 'redis';
 
 // Mock Redis client
 jest.mock('../../lib/redis');
@@ -42,7 +43,8 @@ describe('Phase 2 Integration Tests: Session Tracking + SPA Navigation', () => {
       disconnect: jest.fn(),
     };
 
-    mockGetRedisClient.mockResolvedValue(mockRedis);
+    // Cast to RedisClientType to satisfy type requirements
+    mockGetRedisClient.mockResolvedValue(mockRedis as unknown as RedisClientType);
   });
 
   describe('Session Persistence E2E', () => {
