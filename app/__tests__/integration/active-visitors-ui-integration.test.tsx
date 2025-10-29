@@ -13,7 +13,6 @@ import * as React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { ActiveVisitorBadge } from '@/components/dashboard/active-visitor-badge';
 import { getRedisClient } from 'lib/redis';
-import { NextRequest } from 'next/server';
 
 // Use real fetch, but control the API response
 const originalFetch = global.fetch;
@@ -80,8 +79,7 @@ describe('Active Visitors UI Integration', () => {
       if (url.includes('/api/active-visitors')) {
         // Import and call the actual route handler
         return import('../../src/app/api/active-visitors/route').then(module => {
-          const request = new NextRequest('http://localhost:3000/api/active-visitors');
-          return module.GET(request);
+          return module.GET();
         });
       }
       return originalFetch(url);
@@ -124,8 +122,7 @@ describe('Active Visitors UI Integration', () => {
     const mockFetch = jest.fn((url: string) => {
       if (url.includes('/api/active-visitors')) {
         return import('../../src/app/api/active-visitors/route').then(module => {
-          const request = new NextRequest('http://localhost:3000/api/active-visitors');
-          return module.GET(request);
+          return module.GET();
         });
       }
       return originalFetch(url);
@@ -182,8 +179,7 @@ describe('Active Visitors UI Integration', () => {
           return Promise.reject(new Error('Network error'));
         }
         return import('../../src/app/api/active-visitors/route').then(module => {
-          const request = new NextRequest('http://localhost:3000/api/active-visitors');
-          return module.GET(request);
+          return module.GET();
         });
       }
       return originalFetch(url);
@@ -239,8 +235,7 @@ describe('Active Visitors UI Integration', () => {
     const mockFetch = jest.fn((url: string) => {
       if (url.includes('/api/active-visitors')) {
         return import('../../src/app/api/active-visitors/route').then(module => {
-          const request = new NextRequest('http://localhost:3000/api/active-visitors');
-          return module.GET(request);
+          return module.GET();
         });
       }
       return originalFetch(url);
@@ -280,8 +275,7 @@ describe('Active Visitors UI Integration', () => {
     const mockFetch = jest.fn((url: string) => {
       if (url.includes('/api/active-visitors')) {
         return import('../../src/app/api/active-visitors/route').then(module => {
-          const request = new NextRequest('http://localhost:3000/api/active-visitors');
-          return module.GET(request);
+          return module.GET();
         });
       }
       return originalFetch(url);

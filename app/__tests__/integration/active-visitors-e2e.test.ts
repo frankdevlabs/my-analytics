@@ -117,8 +117,7 @@ describe('Active Visitors E2E Integration Tests', () => {
     expect(redisCount).toBeGreaterThan(0);
 
     // Step 3: Query active visitor count via API
-    const queryRequest = new NextRequest('http://localhost:3000/api/active-visitors');
-    const queryResponse = await getActiveVisitors(queryRequest);
+    const queryResponse = await getActiveVisitors();
     const queryData = await queryResponse.json();
 
     expect(queryResponse.status).toBe(200);
@@ -176,8 +175,7 @@ describe('Active Visitors E2E Integration Tests', () => {
     await new Promise(resolve => setTimeout(resolve, 200));
 
     // Query active count
-    const queryRequest = new NextRequest('http://localhost:3000/api/active-visitors');
-    const queryResponse = await getActiveVisitors(queryRequest);
+    const queryResponse = await getActiveVisitors();
     const queryData = await queryResponse.json();
 
     expect(queryResponse.status).toBe(200);
@@ -229,8 +227,7 @@ describe('Active Visitors E2E Integration Tests', () => {
     await new Promise(resolve => setTimeout(resolve, 100));
 
     // Query active count - should be 1 (deduplicated)
-    const queryRequest = new NextRequest('http://localhost:3000/api/active-visitors');
-    const queryResponse = await getActiveVisitors(queryRequest);
+    const queryResponse = await getActiveVisitors();
     await queryResponse.json();
 
     expect(queryResponse.status).toBe(200);
@@ -311,8 +308,7 @@ describe('Active Visitors E2E Integration Tests', () => {
     ]);
 
     // Query active count
-    const queryRequest = new NextRequest('http://localhost:3000/api/active-visitors');
-    const queryResponse = await getActiveVisitors(queryRequest);
+    const queryResponse = await getActiveVisitors();
     const queryData = await queryResponse.json();
 
     expect(queryResponse.status).toBe(200);
@@ -349,8 +345,7 @@ describe('Active Visitors E2E Integration Tests', () => {
     expect(beforeCleanup).toBe(5);
 
     // Trigger cleanup by querying active visitors
-    const queryRequest = new NextRequest('http://localhost:3000/api/active-visitors');
-    await getActiveVisitors(queryRequest);
+    await getActiveVisitors();
 
     // Count total entries after cleanup
     const afterCleanup = await redisClient.zCount('active_visitors', '-inf', '+inf');
