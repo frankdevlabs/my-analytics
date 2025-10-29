@@ -821,7 +821,8 @@ export async function getDeviceTypeBreakdown(
 
 /**
  * Get browser breakdown with top N browsers plus "Other" category
- * Returns browser name + major version with counts and percentages
+ * Returns browser name (without version) with counts and percentages
+ * All versions of the same browser are grouped together
  *
  * @param {Date} startDate - Start of date range (inclusive)
  * @param {Date} endDate - End of date range (inclusive)
@@ -835,10 +836,10 @@ export async function getDeviceTypeBreakdown(
  *   5
  * );
  * // Returns: [
- * //   { browser: 'Chrome 120', count: 3500, percentage: 43.75 },
- * //   { browser: 'Safari 17', count: 2000, percentage: 25.0 },
- * //   { browser: 'Firefox 121', count: 1500, percentage: 18.75 },
- * //   { browser: 'Edge 120', count: 500, percentage: 6.25 },
+ * //   { browser: 'Google Chrome', count: 3500, percentage: 43.75 },
+ * //   { browser: 'Safari', count: 2000, percentage: 25.0 },
+ * //   { browser: 'Firefox', count: 1500, percentage: 18.75 },
+ * //   { browser: 'Microsoft Edge', count: 500, percentage: 6.25 },
  * //   { browser: 'Unknown', count: 300, percentage: 3.75 },
  * //   { browser: 'Other', count: 200, percentage: 2.5 }
  * // ]
@@ -865,23 +866,19 @@ export async function getBrowserBreakdown(
         return [];
       }
 
-      // Get top N browsers with concatenated browser name + major version
+      // Get top N browsers grouped by browser name (without version numbers)
       // Handle nulls with COALESCE to group unknown browsers
       const topBrowsers = await prisma.$queryRaw<Array<{
         browser: string;
         count: bigint;
       }>>`
         SELECT
-          CASE
-            WHEN browser_name IS NULL THEN 'Unknown'
-            WHEN browser_major_version IS NULL OR browser_major_version = '' THEN COALESCE(browser_name, 'Unknown')
-            ELSE CONCAT(COALESCE(browser_name, 'Unknown'), ' ', browser_major_version)
-          END as browser,
+          COALESCE(browser_name, 'Unknown') as browser,
           COUNT(*) as count
         FROM pageviews
         WHERE added_iso >= ${startDate}
           AND added_iso <= ${endDate}
-        GROUP BY browser
+        GROUP BY browser_name
         ORDER BY count DESC
         LIMIT ${limit}
       `;
