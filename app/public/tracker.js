@@ -1,6 +1,6 @@
 /**
  * Privacy-First Analytics Tracker
- * Version: 2.0.0
+ * Version: 2.1.0
  * License: MIT
  *
  * Based on Simple Analytics (https://github.com/simpleanalytics/scripts)
@@ -14,6 +14,7 @@
  * - Supports SPA navigation tracking
  * - Tracks scroll milestones and engagement metrics
  * - Uses CUID2 format for page_id generation
+ * - Three-tier transport fallback (sendBeacon → fetch → image beacon)
  */
 
 (function() {
@@ -98,8 +99,90 @@
     }
   };
 
+  /**
+   * Detect the origin from which this script was loaded
+   * This allows the tracker to work across different domains
+   * by sending data back to the origin that serves the script
+   * Recognizes: tracker.js, tracker.min.js, fb-a7k2.js
+   */
+  var getScriptOrigin = function() {
+    try {
+      // Try to find the current script element
+      var scripts = document.getElementsByTagName('script');
+      for (var i = 0; i < scripts.length; i++) {
+        var src = scripts[i].src;
+        if (src && (src.indexOf('tracker.js') !== -1 || src.indexOf('tracker.min.js') !== -1 || src.indexOf('fb-a7k2.js') !== -1)) {
+          // Extract origin from the script URL
+          var url = new URL(src);
+          return url.origin;
+        }
+      }
+    } catch (e) {
+      // Fallback if detection fails
+    }
+    // Default to current page origin as fallback
+    return window.location.origin;
+  };
+
+  /**
+   * Base64 encode helper for image beacon
+   * Handles potential UTF-8 issues gracefully
+   */
+  var encodePayload = function(data) {
+    try {
+      return encodeURIComponent(btoa(JSON.stringify(data)));
+    } catch (e) {
+      // Fallback for UTF-8 characters
+      try {
+        return encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(data)))));
+      } catch (e2) {
+        return '';
+      }
+    }
+  };
+
+  /**
+   * Three-tier transport fallback system
+   * Primary: sendBeacon (designed for analytics, handles page unload)
+   * Secondary: fetch with keepalive (wide browser support)
+   * Tertiary: Image beacon (universal compatibility, GET request)
+   */
+  var sendData = function(endpoint, data) {
+    try {
+      // Primary: sendBeacon (most reliable for page unload)
+      if (typeof navigator.sendBeacon === 'function') {
+        var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+        var sent = navigator.sendBeacon(endpoint, blob);
+        if (sent) return;
+      }
+    } catch (e) {}
+
+    try {
+      // Secondary: fetch with keepalive (good browser support)
+      if (typeof fetch === 'function') {
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+          keepalive: true
+        }).catch(function() {});
+        return;
+      }
+    } catch (e) {}
+
+    try {
+      // Tertiary: Image beacon (universal fallback, ~2000 char URL limit)
+      var encoded = encodePayload(data);
+      if (encoded) {
+        var img = new Image();
+        img.src = endpoint + '?data=' + encoded;
+      }
+    } catch (e) {}
+  };
+
   // Configuration
   var collectDNT = false;
+  var apiOrigin = getScriptOrigin();
 
   // Exit if Do Not Track is enabled
   if (!collectDNT && navigator.doNotTrack === '1') {
@@ -184,56 +267,37 @@
    * Send pageview data to tracking endpoint
    */
   var sendPageview = function(data) {
-    try {
-      var endpoint = window.location.origin + '/api/track';
-      fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-        keepalive: true
-      }).catch(function() {});
-    } catch (e) {}
+    var endpoint = apiOrigin + '/api/metrics';
+    sendData(endpoint, data);
   };
 
   /**
    * Send append data
    */
   var sendAppend = function(duration, scrolled) {
-    try {
-      var endpoint = window.location.origin + '/api/track/append';
-      fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          page_id: currentPageId,
-          duration_seconds: duration,
-          scrolled_percentage: scrolled
-        }),
-        keepalive: true
-      }).catch(function() {});
-    } catch (e) {}
+    var endpoint = apiOrigin + '/api/metrics/append';
+    var data = {
+      page_id: currentPageId,
+      duration_seconds: duration,
+      scrolled_percentage: scrolled
+    };
+    sendData(endpoint, data);
   };
 
   /**
    * Track custom event
    */
   var trackEvent = function(eventName, metadata) {
-    try {
-      var endpoint = window.location.origin + '/api/track/event';
-      fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event_name: eventName,
-          event_metadata: metadata || {},
-          page_id: currentPageId,
-          session_id: sessionId,
-          path: window.location.pathname,
-          timestamp: new Date().toISOString()
-        }),
-        keepalive: true
-      }).catch(function() {});
-    } catch (e) {}
+    var endpoint = apiOrigin + '/api/metrics/event';
+    var data = {
+      event_name: eventName,
+      event_metadata: metadata || {},
+      page_id: currentPageId,
+      session_id: sessionId,
+      path: window.location.pathname,
+      timestamp: new Date().toISOString()
+    };
+    sendData(endpoint, data);
   };
 
   window.trackEvent = trackEvent;
