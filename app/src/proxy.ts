@@ -34,7 +34,7 @@ export const proxy = auth(async function middleware(request) {
   }
 
   // Define public routes that don't require authentication
-  const publicRoutes = ['/login', '/api/track', '/tracker.min.js', '/fb-a7k2.js'];
+  const publicRoutes = ['/login', '/api/track', '/api/metrics', '/tracker.min.js', '/fb-a7k2.js'];
 
   // Check if current path is a public route
   const isPublicRoute = publicRoutes.some((route) =>
