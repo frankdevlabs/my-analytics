@@ -63,13 +63,38 @@ export function extractDomainFromUrl(url: string | null): string | null {
 /**
  * Determine the category for a given domain
  * Categorizes domains as Direct, Search, Social, or External
+ *
  * @param {string | null} domain - The domain to categorize
+ * @param {string | null} siteHostname - The hostname of the site being tracked (optional)
  * @returns {string} Category constant (CATEGORY_DIRECT, CATEGORY_SEARCH, CATEGORY_SOCIAL, or CATEGORY_EXTERNAL)
  */
-export function getCategoryFromDomain(domain: string | null): string {
+export function getCategoryFromDomain(
+  domain: string | null,
+  siteHostname?: string | null
+): string {
   // Return Direct for null or empty domains
   if (!domain || domain.trim() === '') {
     return CATEGORY_DIRECT;
+  }
+
+  // Check if domain matches the site's own hostname (internal referrer)
+  // This handles internal navigation (e.g., franksblog.nl → franksblog.nl)
+  if (siteHostname) {
+    const normalizedSiteHostname = siteHostname.trim().toLowerCase();
+    const normalizedDomain = domain.trim().toLowerCase();
+
+    // Remove www. prefix for comparison
+    const siteWithoutWww = normalizedSiteHostname.startsWith('www.')
+      ? normalizedSiteHostname.substring(4)
+      : normalizedSiteHostname;
+    const domainWithoutWww = normalizedDomain.startsWith('www.')
+      ? normalizedDomain.substring(4)
+      : normalizedDomain;
+
+    // If referrer domain matches site domain, treat as Direct
+    if (domainWithoutWww === siteWithoutWww) {
+      return CATEGORY_DIRECT;
+    }
   }
 
   // Check if domain matches search engines (using includes to handle subdomains)

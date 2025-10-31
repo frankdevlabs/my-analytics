@@ -31,6 +31,7 @@ import { getOrCreateSession, updateSession } from 'lib/session/session-storage';
 import { recordVisitorActivity } from 'lib/active-visitors/active-visitor-tracking';
 import { prisma } from 'lib/db/prisma';
 import { getCorsHeaders } from 'lib/config/cors';
+import { extractDomainFromUrl, getCategoryFromDomain } from 'lib/config/referrer-categories';
 
 /**
  * 1x1 transparent GIF pixel (43 bytes)
@@ -127,6 +128,11 @@ async function processPageview(payload: any, request: NextRequest): Promise<void
     }
   }
 
+  // Extract referrer domain and category for analytics
+  // Pass the site's hostname to detect internal referrers (franksblog.nl → franksblog.nl)
+  const referrerDomain = extractDomainFromUrl(payload.document_referrer || null);
+  const referrerCategory = getCategoryFromDomain(referrerDomain, payload.hostname);
+
   // Raw IP is now discarded after hashing and GeoIP lookup
   // Never stored in database to maintain privacy
 
@@ -148,6 +154,10 @@ async function processPageview(payload: any, request: NextRequest): Promise<void
           query_string: payload.query_string || null,
           document_title: payload.document_title || null,
           document_referrer: payload.document_referrer || null,
+
+          // Referrer Analytics (2 fields)
+          referrer_domain: referrerDomain,
+          referrer_category: referrerCategory,
 
           // Visitor Classification (3 fields)
           is_unique: isUnique,

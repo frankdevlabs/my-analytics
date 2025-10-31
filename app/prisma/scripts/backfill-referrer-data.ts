@@ -25,6 +25,7 @@ const TRANSACTION_TIMEOUT = 30000; // 30 seconds per batch
 interface PageviewBatch {
   id: string;
   document_referrer: string | null;
+  hostname: string | null;
 }
 
 /**
@@ -36,7 +37,8 @@ async function processBatch(batch: PageviewBatch[], batchNumber: number): Promis
       async (tx) => {
         for (const pageview of batch) {
           const domain = extractDomainFromUrl(pageview.document_referrer);
-          const category = getCategoryFromDomain(domain);
+          // Pass hostname to detect internal referrers (franksblog.nl → Direct)
+          const category = getCategoryFromDomain(domain, pageview.hostname);
 
           await tx.pageview.update({
             where: { id: pageview.id },
@@ -93,13 +95,14 @@ async function backfillReferrerData(): Promise<void> {
       batchNumber++;
 
       // Fetch next batch
-      const batch: Array<{ id: string; document_referrer: string | null }> = await prisma.pageview.findMany({
+      const batch: Array<{ id: string; document_referrer: string | null; hostname: string | null }> = await prisma.pageview.findMany({
         where: {
           referrer_domain: null,
         },
         select: {
           id: true,
           document_referrer: true,
+          hostname: true,
         },
         take: BATCH_SIZE,
         skip: cursor ? 1 : 0, // Skip the cursor

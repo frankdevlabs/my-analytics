@@ -21,6 +21,7 @@
  */
 
 import { init } from '@paralleldrive/cuid2';
+import { extractDomainFromUrl, getCategoryFromDomain } from '../config/referrer-categories';
 
 // Initialize CUID2 generator with length 24 (will prepend 'c' for 25 total)
 const createCuid2 = init({ length: 24 });
@@ -45,6 +46,8 @@ export interface MappedPageview {
   query_string?: string;
   document_title?: string;
   document_referrer?: string;
+  referrer_domain?: string | null;
+  referrer_category?: string;
   is_internal_referrer: boolean;
   device_type: 'desktop' | 'mobile' | 'tablet';
   browser_name?: string;
@@ -208,6 +211,12 @@ export interface MappedPageviewWithMeta {
 export function mapCsvRowToPageview(csvRow: CsvRow): MappedPageviewWithMeta {
   const pageIdResult = convertToPageId(csvRow.uuid);
 
+  // Extract referrer domain and category from document_referrer
+  // Pass hostname to detect internal referrers (franksblog.nl → Direct)
+  // This matches the live tracking API logic for consistency
+  const referrerDomain = extractDomainFromUrl(csvRow.document_referrer || null);
+  const referrerCategory = getCategoryFromDomain(referrerDomain, csvRow.hostname || null);
+
   return {
     data: {
       // Critical Fields - Required
@@ -226,6 +235,10 @@ export function mapCsvRowToPageview(csvRow: CsvRow): MappedPageviewWithMeta {
     query_string: emptyToUndefined(csvRow.query),
     document_title: undefined, // Not in CSV
     document_referrer: emptyToUndefined(csvRow.document_referrer),
+
+    // Referrer Analytics Fields - Server-extracted
+    referrer_domain: referrerDomain || undefined,
+    referrer_category: referrerCategory,
 
     // Visitor Classification - Defaults
     is_internal_referrer: false, // Always false per spec
