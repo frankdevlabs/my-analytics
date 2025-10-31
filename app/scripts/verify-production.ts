@@ -26,6 +26,7 @@
  *   2 - Warnings present but can proceed
  */
 
+import 'dotenv/config';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { existsSync, statSync } from 'fs';
