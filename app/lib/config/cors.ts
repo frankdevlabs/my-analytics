@@ -87,10 +87,11 @@ export function getCorsHeaders(
 ): Record<string, string> {
   const origin = request.headers.get('origin');
 
-  // Base headers that always include CSP
+  // Base headers that always include CSP and credentials support
   const baseHeaders: Record<string, string> = {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400',
     'Content-Security-Policy': "default-src 'self'",
   };
