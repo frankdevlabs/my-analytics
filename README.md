@@ -300,13 +300,36 @@ npm test -- path/to/test.test.ts
 
 ## Production Deployment
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for a comprehensive production deployment checklist including:
-- Database migration procedures
-- Redis configuration
-- Environment variable setup
-- Health monitoring
-- Performance tuning
-- Rollback procedures
+### Quick Production Setup
+
+For detailed production deployment instructions, see **[DEPLOYMENT.md](./DEPLOYMENT.md)**.
+
+Quick start for production:
+
+```bash
+# 1. Verify production environment
+cd app
+npm run verify:production
+
+# 2. Run automated production setup
+npm run setup:production
+
+# 3. Build the application
+npm run build
+
+# 4. Start the production server
+npm start
+```
+
+The comprehensive [DEPLOYMENT.md](./DEPLOYMENT.md) guide includes:
+- **Prerequisites**: System requirements, required services
+- **Environment Setup**: PostgreSQL, Redis, Node.js configuration
+- **Deployment Steps**: Step-by-step production deployment
+- **Troubleshooting**: Common issues and solutions
+- **Rollback Procedures**: How to safely rollback deployments
+- **Monitoring & Maintenance**: Health checks, backups, log rotation
+- **Security Best Practices**: Firewall, SSL/TLS, reverse proxy
+- **Performance Optimization**: Database tuning, caching strategies
 
 ## Updating GeoIP Database
 

@@ -5,6 +5,7 @@ node_modules/
 .env
 .env.local
 .env*.local
+.env.production
 
 # Logs
 logs/
@@ -55,3 +56,6 @@ agent-os/
 # Data
 data/*
 !data/.gitkeep
+
+deployment/
+DEPLOYMENT.md

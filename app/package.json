@@ -12,7 +12,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "create-user": "tsx app/scripts/create-first-user.ts",
+    "create-user": "tsx scripts/create-first-user.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "tsx scripts/db-reset.ts",
     "postmigrate": "npm run create-user",
@@ -22,7 +22,9 @@
     "delete:historical:execute": "tsx scripts/delete-historical.ts --execute",
     "check:unique-visitors": "tsx scripts/check-unique-visitors.ts",
     "backfill:analytics": "tsx scripts/backfill-analytics.ts",
-    "backfill:analytics:execute": "tsx scripts/backfill-analytics.ts --execute"
+    "backfill:analytics:execute": "tsx scripts/backfill-analytics.ts --execute",
+    "setup:production": "tsx scripts/setup-production.ts",
+    "verify:production": "tsx scripts/verify-production.ts"
   },
   "dependencies": {
     "@maxmind/geoip2-node": "^6.2.0",
