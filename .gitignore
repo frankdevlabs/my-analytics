@@ -36,10 +36,12 @@ coverage/
 *.tsbuildinfo
 
 # Database backups
-*.sql
+# Exclude SQL backups but allow Prisma migration files
 *.dump
 *.backup
 backups/
+*.sql
+!prisma/migrations/**/*.sql
 
 # Redis
 dump.rdb

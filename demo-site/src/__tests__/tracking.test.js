@@ -8,7 +8,7 @@
 describe('Tracking Integration', () => {
   beforeEach(() => {
     // Clear any existing tracking script
-    const existingScript = document.querySelector('script[src*="tracker.min.js"]')
+    const existingScript = document.querySelector('script[src*="fb-a7k2.js"]')
     if (existingScript) {
       existingScript.remove()
     }
@@ -24,12 +24,12 @@ describe('Tracking Integration', () => {
     test('tracking script loads from correct URL', () => {
       // Create and append tracking script
       const script = document.createElement('script')
-      script.src = 'http://localhost:3000/tracker.min.js'
+      script.src = 'http://localhost:3000/fb-a7k2.js'
       script.async = true
       script.defer = true
       document.head.appendChild(script)
 
-      const loadedScript = document.querySelector('script[src="http://localhost:3000/tracker.min.js"]')
+      const loadedScript = document.querySelector('script[src="http://localhost:3000/fb-a7k2.js"]')
       expect(loadedScript).toBeTruthy()
       expect(loadedScript.async).toBe(true)
       expect(loadedScript.defer).toBe(true)
@@ -37,7 +37,7 @@ describe('Tracking Integration', () => {
 
     test('handles script load errors gracefully', () => {
       const script = document.createElement('script')
-      script.src = 'http://localhost:3000/tracker.min.js'
+      script.src = 'http://localhost:3000/fb-a7k2.js'
 
       // Mock onerror handler
       const errorHandler = jest.fn()

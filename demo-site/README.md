@@ -35,7 +35,7 @@ Before running the demo site, ensure you have the following installed and config
 **IMPORTANT**: The main My Analytics app MUST be running on `localhost:3000` for tracking to work.
 
 The demo site depends on:
-- **Tracking script**: Loaded from `http://localhost:3000/tracker.min.js`
+- **Tracking script**: Loaded from `http://localhost:3000/fb-a7k2.js`
 - **API endpoint**: Sends data to `http://localhost:3000/api/track`
 - **Analytics dashboard**: View tracked events at `http://localhost:3000/dashboard`
 
@@ -175,7 +175,7 @@ demo-site/
 
 The demo site integrates the My Analytics tracking script via `gatsby-browser.js`:
 
-**Script Source**: `http://localhost:3000/tracker.min.js`
+**Script Source**: `http://localhost:3000/fb-a7k2.js`
 **API Endpoint**: `http://localhost:3000/api/track`
 
 The tracking script is loaded asynchronously on initial page load and provides:
@@ -316,7 +316,7 @@ http://localhost:8000/?utm_source=email&utm_medium=newsletter&utm_campaign=weekl
 **Solution**:
 1. Open browser DevTools > Network tab
 2. Refresh the page
-3. Look for request to `tracker.min.js`
+3. Look for request to `fb-a7k2.js`
 4. If missing or 404:
    - Verify main app is running on port 3000
    - Check `gatsby-browser.js` for correct script URL
@@ -386,10 +386,10 @@ For production deployment, update the tracking script URL in `gatsby-browser.js`
 
 ```javascript
 // Development (localhost)
-const scriptSrc = 'http://localhost:3000/tracker.min.js';
+const scriptSrc = 'http://localhost:3000/fb-a7k2.js';
 
 // Production (replace with your actual domain)
-const scriptSrc = 'https://your-analytics-domain.com/tracker.min.js';
+const scriptSrc = 'https://your-analytics-domain.com/fb-a7k2.js';
 ```
 
 #### Static Hosting
@@ -410,7 +410,7 @@ Consider using environment variables for tracking configuration:
 // gatsby-config.js
 module.exports = {
   siteMetadata: {
-    trackingScriptUrl: process.env.TRACKING_SCRIPT_URL || 'http://localhost:3000/tracker.min.js',
+    trackingScriptUrl: process.env.TRACKING_SCRIPT_URL || 'http://localhost:3000/fb-a7k2.js',
   },
 };
 ```
@@ -448,7 +448,7 @@ gatsby develop -p 8080
 2. Visit `http://localhost:3000` to confirm it's accessible
 3. Refresh the demo site
 
-#### Issue: "Cannot GET /tracker.min.js"
+#### Issue: "Cannot GET /fb-a7k2.js"
 
 **Symptoms**: 404 error when loading tracking script
 
@@ -456,7 +456,7 @@ gatsby develop -p 8080
 1. Verify the tracking script exists:
    ```bash
    cd app
-   ls public/tracker.min.js
+   ls public/fb-a7k2.js
    ```
 2. If missing, rebuild the tracker:
    ```bash
@@ -495,7 +495,7 @@ npm run develop
 1. Open DevTools (F12)
 2. Go to Network tab
 3. Reload page
-4. Look for `tracker.min.js` request
+4. Look for `fb-a7k2.js` request
 5. Should show status 200 and size ~2-5KB
 
 #### View Tracking Requests

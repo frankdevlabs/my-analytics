@@ -44,14 +44,14 @@ export const onRouteUpdate = ({ location, prevLocation }) => {
  */
 function loadTrackingScript() {
   // Check if script is already loaded
-  const existingScript = document.querySelector('script[src*="tracker.min.js"]')
+  const existingScript = document.querySelector('script[src*="fb-a7k2.js"]')
   if (existingScript) {
     return
   }
 
   // Create script element
   const script = document.createElement('script')
-  script.src = 'http://localhost:3000/tracker.min.js'
+  script.src = 'http://localhost:3000/fb-a7k2.js'
   script.async = true
   script.defer = true
 
