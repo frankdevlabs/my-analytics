@@ -97,6 +97,16 @@ describe('Proxy', () => {
       expect(response).toBeInstanceOf(NextResponse);
       expect(mockGetToken).not.toHaveBeenCalled();
     });
+
+    it('should allow access to /fb-a7k2.js without authentication', async () => {
+      mockGetToken.mockResolvedValue(null);
+      const request = createMockRequest('/fb-a7k2.js');
+
+      const response = await proxy(request);
+
+      expect(response).toBeInstanceOf(NextResponse);
+      expect(mockGetToken).not.toHaveBeenCalled();
+    });
   });
 
   describe('Tracker.js serving', () => {

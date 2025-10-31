@@ -14,12 +14,13 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { auth } from '../lib/auth/config';
 
 /**
  * Proxy function - runs on every request matching the config matcher
+ * Uses NextAuth v5 auth wrapper for proper session handling
  */
-export async function proxy(request: NextRequest) {
+export const proxy = auth(async function middleware(request) {
   const { pathname } = request.nextUrl;
 
   // CRITICAL: Preserve tracker.js serving logic FIRST (before any auth checks)
@@ -33,7 +34,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Define public routes that don't require authentication
-  const publicRoutes = ['/login', '/api/track', '/tracker.min.js'];
+  const publicRoutes = ['/login', '/api/track', '/tracker.min.js', '/fb-a7k2.js'];
 
   // Check if current path is a public route
   const isPublicRoute = publicRoutes.some((route) =>
@@ -49,13 +50,8 @@ export async function proxy(request: NextRequest) {
   }
 
   // For all other routes, check authentication status
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-  });
-
-  // If no valid token, redirect to login with callbackUrl
-  if (!token) {
+  // request.auth is populated by NextAuth's auth() wrapper
+  if (!request.auth) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
 
@@ -64,7 +60,7 @@ export async function proxy(request: NextRequest) {
 
   // User is authenticated, allow access
   return NextResponse.next();
-}
+});
 
 /**
  * Proxy configuration - specify which routes to run proxy on
