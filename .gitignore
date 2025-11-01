@@ -59,6 +59,5 @@ agent-os/
 data/*
 !data/.gitkeep
 
-deployment/
 DEPLOYMENT.md
 GATSBY_INTEGRATION.md

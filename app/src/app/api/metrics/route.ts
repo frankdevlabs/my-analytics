@@ -21,7 +21,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isbot } from 'isbot';
-import { PageviewPayloadSchema } from 'lib/validation/pageview-schema';
+import { PageviewPayloadSchema, PageviewPayload } from 'lib/validation/pageview-schema';
 import { parseUserAgent } from 'lib/parsing/user-agent-parser';
 import { extractMajorVersion } from 'lib/parsing/extract-major-version';
 import { lookupCountryCode } from 'lib/geoip/maxmind-reader';
@@ -68,7 +68,7 @@ function extractIpAddress(request: NextRequest): string {
  * Process pageview payload and record to database
  * Shared logic between POST and GET handlers
  */
-async function processPageview(payload: any, request: NextRequest): Promise<void> {
+async function processPageview(payload: PageviewPayload, request: NextRequest): Promise<void> {
   // Extract IP address from request headers
   const ip = extractIpAddress(request);
 
@@ -344,7 +344,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse JSON payload
-    let payload: any;
+    let payload: unknown;
     try {
       payload = JSON.parse(decodedData);
     } catch (error) {

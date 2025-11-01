@@ -1,0 +1,18 @@
+[Unit]
+Description=Analytics Next.js App
+After=network.target
+
+[Service]
+Type=simple
+User=supergoose
+WorkingDirectory=/home/supergoose/my-analytics/app
+EnvironmentFile=/home/supergoose/my-analytics/app/.env
+ExecStart=/home/supergoose/.nvm/versions/node/v20.10.0/bin/node /home/supergoose/my-analytics/app/node_modules/.bin/next start
+Restart=on-failure
+RestartSec=10s
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=PATH=/home/supergoose/.nvm/versions/node/v20.10.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target

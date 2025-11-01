@@ -9,11 +9,18 @@ const eslintConfig = [
   ...nextCoreWebVitals,
   // Extend Next.js TypeScript config (native flat format)
   ...nextTypescript,
-  // Allow CommonJS require() in .cjs files (configuration files)
+  // Allow CommonJS require() in .cjs files and scripts (configuration/utility files)
   {
-    files: ["**/*.cjs"],
+    files: ["**/*.cjs", "scripts/**/*.ts"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+  // Allow 'any' type in test files (common practice for mocking/assertions)
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/__tests__/**/*.ts", "**/__tests__/**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
   // Ignore patterns for build artifacts and generated files
@@ -24,6 +31,8 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "coverage/**",
+      "public/**/*.js",  // Ignore built/minified tracker scripts
     ],
   },
 ];

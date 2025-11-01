@@ -1,0 +1,256 @@
+name: CD - Deploy to Production
+
+on:
+  push:
+    branches: [main]  # Auto-deploy on push to main
+  workflow_dispatch:  # Manual deployment trigger
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (shows what would happen without making changes)'
+        type: boolean
+        default: false
+        required: false
+      branch:
+        description: 'Branch to deploy (default: main)'
+        type: string
+        default: 'main'
+        required: false
+
+# Permissions for deployment (reading repo + creating commit comments)
+permissions:
+  contents: write
+
+# Prevent concurrent deployments
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false  # Don't cancel ongoing deployments
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || 'main' }}
+
+      - name: Determine deployment mode
+        id: mode
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "DRY_RUN=--dry-run" >> $GITHUB_OUTPUT
+            echo "MODE=DRY-RUN" >> $GITHUB_OUTPUT
+          else
+            echo "DRY_RUN=" >> $GITHUB_OUTPUT
+            echo "MODE=PRODUCTION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Display deployment info
+        run: |
+          echo "🚀 Deployment Information"
+          echo "========================="
+          echo "Mode: ${{ steps.mode.outputs.MODE }}"
+          echo "Branch: ${{ github.event.inputs.branch || github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Trigger: ${{ github.event_name }}"
+
+      - name: Validate GitHub Secrets
+        run: |
+          echo "Validating required secrets..."
+
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "❌ Error: SSH_PRIVATE_KEY secret not configured"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.SSH_USER }}" ]; then
+            echo "❌ Error: SSH_USER secret not configured"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.SERVER_IP }}" ]; then
+            echo "❌ Error: SERVER_IP secret not configured"
+            exit 1
+          fi
+
+          echo "✅ All required secrets are configured"
+
+      - name: Setup SSH
+        run: |
+          echo "Setting up SSH connection..."
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          # Add SSH private key (using printf to preserve newlines)
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          # Validate SSH key format
+          if ! ssh-keygen -l -f ~/.ssh/id_rsa > /dev/null 2>&1; then
+            echo "❌ Error: Invalid SSH private key format"
+            echo "Key fingerprint check failed. Please verify SSH_PRIVATE_KEY secret."
+            exit 1
+          fi
+
+          echo "✅ SSH key validated successfully"
+
+          # Add server to known_hosts
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+          # Test SSH connection
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo '✅ SSH connection successful'"
+
+      - name: Run deployment
+        id: deploy
+        env:
+          DEPLOY_BRANCH: ${{ github.event.inputs.branch || github.ref_name }}
+        run: |
+          echo "Starting deployment..."
+          echo "Branch: $DEPLOY_BRANCH"
+          echo "Mode: ${{ steps.mode.outputs.MODE }}"
+          echo "Dry Run Flag: ${{ steps.mode.outputs.DRY_RUN }}"
+
+          # Execute deployment on server
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << ENDSSH
+            set -e
+
+            echo "Navigating to project directory..."
+            cd /home/${{ secrets.SSH_USER }}/my-analytics
+
+            echo "Pulling latest code from $DEPLOY_BRANCH..."
+            git fetch origin $DEPLOY_BRANCH
+            git reset --hard origin/$DEPLOY_BRANCH
+
+            echo "Running deployment script..."
+            export DEPLOY_BRANCH=$DEPLOY_BRANCH
+            bash deployment/scripts/deploy.sh ${{ steps.mode.outputs.DRY_RUN }} --verbose
+          ENDSSH
+
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+
+      - name: Verify deployment
+        if: steps.mode.outputs.DRY_RUN == ''  # Only verify real deployments
+        run: |
+          echo "Verifying deployment health..."
+
+          # Wait a few seconds for app to start
+          sleep 5
+
+          # Health check with retries
+          for i in {1..10}; do
+            echo "Health check attempt $i/10..."
+            if ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "curl -f http://localhost:3000/api/health"; then
+              echo "✅ Health check passed!"
+              exit 0
+            fi
+            echo "⚠️  Health check failed, retrying in 5s..."
+            sleep 5
+          done
+
+          echo "❌ Health check failed after 10 attempts"
+          exit 1
+
+      - name: Verify systemd service
+        if: steps.mode.outputs.DRY_RUN == ''  # Only verify real deployments
+        run: |
+          echo "Checking systemd service status..."
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "systemctl status analytics.service --no-pager || true"
+
+          # Check if service is active
+          if ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "systemctl is-active --quiet analytics.service"; then
+            echo "✅ Service is active and running"
+          else
+            echo "❌ Service is not running"
+            exit 1
+          fi
+
+      - name: Collect deployment logs
+        if: always()
+        run: |
+          echo "Collecting deployment logs..."
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "tail -100 /home/${{ secrets.SSH_USER }}/my-analytics/deployment.log 2>/dev/null || echo 'No deployment log found'"
+
+      - name: Post deployment status comment
+        if: github.event_name == 'push' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const mode = '${{ steps.mode.outputs.MODE }}';
+            const status = '${{ job.status }}';
+            const emoji = status === 'success' ? '✅' : '❌';
+            const commit = context.sha.substring(0, 7);
+            const branch = context.ref.replace('refs/heads/', '');
+
+            let body = `## ${emoji} Deployment ${status === 'success' ? 'Successful' : 'Failed'}\n\n`;
+            body += `- **Mode**: ${mode}\n`;
+            body += `- **Branch**: ${branch}\n`;
+            body += `- **Commit**: ${commit}\n`;
+            body += `- **Triggered by**: @${context.actor}\n`;
+            body += `- **Workflow**: [View logs](${context.payload.repository.html_url}/actions/runs/${context.runId})\n`;
+
+            if (status === 'success') {
+              body += `\n🎉 Application deployed to [https://analytics.franksblog.nl](https://analytics.franksblog.nl)`;
+            } else {
+              body += `\n⚠️ Deployment failed. Check workflow logs for details.`;
+            }
+
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: body
+            });
+
+  # Rollback job (only runs if deployment fails)
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: failure() && github.event.inputs.dry_run != 'true'
+
+    steps:
+      - name: Setup SSH for rollback
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: Execute rollback
+        run: |
+          echo "⚠️ Deployment failed, attempting rollback..."
+
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'ENDSSH'
+            cd /home/${{ secrets.SSH_USER }}/my-analytics
+
+            # Get previous commit
+            PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
+            echo "Rolling back to commit: $PREVIOUS_COMMIT"
+
+            # Rollback
+            git reset --hard $PREVIOUS_COMMIT
+            cd app
+            npm install
+            npm run build
+            sudo systemctl restart analytics.service
+
+            echo "✅ Rollback complete"
+          ENDSSH
+
+      - name: Post rollback notification
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## ⚠️ Automatic Rollback Executed\n\nDeployment failed and was automatically rolled back to the previous version.\n\n- **Workflow**: [View logs](${context.payload.repository.html_url}/actions/runs/${context.runId})`;
+
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: body
+            });
