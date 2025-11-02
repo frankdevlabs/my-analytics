@@ -17,8 +17,10 @@ import * as visitorTracking from 'lib/privacy/visitor-tracking';
 
 describe('Active Visitors API Integration', () => {
   let redisClient: Awaited<ReturnType<typeof getRedisClient>>;
-  let _mockLookupCountryCode: jest.SpyInstance;
-  let _mockCheckAndRecordVisitor: jest.SpyInstance;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let mockLookupCountryCode: jest.SpyInstance;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let mockCheckAndRecordVisitor: jest.SpyInstance;
 
   beforeAll(async () => {
     // Generate unique Redis prefix for this test file to prevent key collisions between test files
@@ -34,8 +36,8 @@ describe('Active Visitors API Integration', () => {
 
   beforeEach(async () => {
     // Set up local mocks (not global - isolated to this test file)
-    _mockLookupCountryCode = jest.spyOn(maxmindReader, 'lookupCountryCode').mockReturnValue('US');
-    _mockCheckAndRecordVisitor = jest.spyOn(visitorTracking, 'checkAndRecordVisitor').mockResolvedValue(true);
+    mockLookupCountryCode = jest.spyOn(maxmindReader, 'lookupCountryCode').mockReturnValue('US');
+    mockCheckAndRecordVisitor = jest.spyOn(visitorTracking, 'checkAndRecordVisitor').mockResolvedValue(true);
 
     // Clean up Redis test data if available
     if (redisClient) {
@@ -166,7 +168,7 @@ describe('Active Visitors API Integration', () => {
       }
 
       const payload = {
-        page_id: 'clh1234567890abcdefghijk1', // Valid CUID format
+        page_id: 'clhactivev000000000000001', // Valid CUID format - unique for this test
         path: '/test-active-visitor-tracking',
         device_type: 'desktop',
         user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -215,7 +217,7 @@ describe('Active Visitors API Integration', () => {
       mockRecordVisitorActivity.mockRejectedValueOnce(new Error('Redis connection failed'));
 
       const payload = {
-        page_id: 'clh2234567890abcdefghijk2', // Valid CUID format
+        page_id: 'clhactivev000000000000002', // Valid CUID format - unique for this test
         path: '/test-active-visitor-redis-failure',
         device_type: 'desktop',
         user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
