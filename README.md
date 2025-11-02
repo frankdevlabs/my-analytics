@@ -1,6 +1,6 @@
 # My Analytics
 
-A privacy-focused, self-hosted web analytics platform built with Next.js 15, PostgreSQL, and Redis.
+A privacy-focused, self-hosted web analytics platform built with Next.js 16, PostgreSQL, and Redis.
 
 ## Features
 
