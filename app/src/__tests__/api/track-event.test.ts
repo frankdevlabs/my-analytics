@@ -1,10 +1,10 @@
 /**
- * Tests for /api/track/event Endpoint
+ * Tests for /api/metrics/event Endpoint
  * Covers custom event tracking with JSONB metadata storage,
  * validation, country code extraction, and CORS headers
  */
 
-import { POST, OPTIONS } from '../../app/api/track/event/route';
+import { POST, OPTIONS } from '../../app/api/metrics/event/route';
 import { prisma } from 'lib/db/prisma';
 import { lookupCountryCode } from 'lib/geoip/maxmind-reader';
 import { NextRequest } from 'next/server';
@@ -21,7 +21,7 @@ jest.mock('lib/db/prisma', () => ({
 
 jest.mock('lib/geoip/maxmind-reader');
 
-describe('/api/track/event endpoint', () => {
+describe('/api/metrics/event endpoint', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -57,7 +57,7 @@ describe('/api/track/event endpoint', () => {
     timestamp: '2025-10-24T12:00:00.000Z',
   };
 
-  describe('POST /api/track/event - Valid submissions', () => {
+  describe('POST /api/metrics/event - Valid submissions', () => {
     it('should accept valid event with metadata and return 204 No Content', async () => {
       (lookupCountryCode as jest.Mock).mockReturnValue('US');
       (prisma.$transaction as jest.Mock).mockResolvedValue({});
@@ -104,7 +104,8 @@ describe('/api/track/event endpoint', () => {
 
       const createData = mockTx.event.create.mock.calls[0][0].data;
       expect(createData.event_name).toBe('page_scroll');
-      expect(createData.event_metadata).toBeNull();
+      // Prisma.JsonNull is stored as {} in the mock (not null)
+      expect(createData.event_metadata).toEqual({});
       expect(createData.page_id).toBeNull();
     });
 
@@ -134,7 +135,7 @@ describe('/api/track/event endpoint', () => {
     });
   });
 
-  describe('POST /api/track/event - Validation errors', () => {
+  describe('POST /api/metrics/event - Validation errors', () => {
     it('should reject request with missing event_name', async () => {
       const invalidPayload = {
         ...validPayload,
@@ -235,7 +236,7 @@ describe('/api/track/event endpoint', () => {
     });
   });
 
-  describe('POST /api/track/event - Country code extraction', () => {
+  describe('POST /api/metrics/event - Country code extraction', () => {
     it('should extract country_code from IP address', async () => {
       (lookupCountryCode as jest.Mock).mockReturnValue('NL');
       (prisma.$transaction as jest.Mock).mockResolvedValue({});
@@ -273,16 +274,16 @@ describe('/api/track/event endpoint', () => {
     });
   });
 
-  describe('POST /api/track/event - CORS headers', () => {
+  describe('POST /api/metrics/event - CORS headers', () => {
     it('should apply correct CORS headers on successful response', async () => {
       (lookupCountryCode as jest.Mock).mockReturnValue('US');
       (prisma.$transaction as jest.Mock).mockResolvedValue({});
 
-      const request = createMockRequest(validPayload);
+      const request = createMockRequest(validPayload, { origin: 'https://franksblog.nl' });
       const response = await POST(request);
 
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://franksblog.nl');
-      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('POST, OPTIONS');
+      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, OPTIONS');
       expect(response.headers.get('Access-Control-Allow-Headers')).toBe('Content-Type');
     });
 
@@ -292,7 +293,7 @@ describe('/api/track/event endpoint', () => {
         // Missing required fields
       };
 
-      const request = createMockRequest(invalidPayload);
+      const request = createMockRequest(invalidPayload, { origin: 'https://franksblog.nl' });
       const response = await POST(request);
 
       expect(response.status).toBe(400);
@@ -300,7 +301,7 @@ describe('/api/track/event endpoint', () => {
     });
   });
 
-  describe('POST /api/track/event - Database errors', () => {
+  describe('POST /api/metrics/event - Database errors', () => {
     it('should return 500 on database error', async () => {
       (lookupCountryCode as jest.Mock).mockReturnValue('US');
       (prisma.$transaction as jest.Mock).mockRejectedValue(new Error('Database connection failed'));
@@ -315,13 +316,19 @@ describe('/api/track/event endpoint', () => {
     });
   });
 
-  describe('OPTIONS /api/track/event - CORS preflight', () => {
+  describe('OPTIONS /api/metrics/event - CORS preflight', () => {
     it('should handle OPTIONS request with correct CORS headers', async () => {
-      const response = await OPTIONS();
+      const request = new NextRequest('http://localhost:3000/api/metrics/event', {
+        method: 'OPTIONS',
+        headers: {
+          origin: 'https://franksblog.nl',
+        },
+      });
+      const response = await OPTIONS(request);
 
       expect(response.status).toBe(204);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://franksblog.nl');
-      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('POST, OPTIONS');
+      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, OPTIONS');
       expect(response.headers.get('Access-Control-Allow-Headers')).toBe('Content-Type');
       expect(response.headers.get('Access-Control-Max-Age')).toBe('86400');
     });

@@ -1,9 +1,9 @@
 /**
- * Tests for /api/track/append Endpoint
+ * Tests for /api/metrics/append Endpoint
  * Covers updating existing pageviews with duration and scroll data
  */
 
-import { POST, OPTIONS } from '../../app/api/track/append/route';
+import { POST, OPTIONS } from '../../app/api/metrics/append/route';
 import { prisma } from 'lib/db/prisma';
 import { NextRequest } from 'next/server';
 
@@ -18,20 +18,21 @@ jest.mock('lib/db/prisma', () => ({
   },
 }));
 
-describe('/api/track/append endpoint', () => {
+describe('/api/metrics/append endpoint', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  const createMockRequest = (body: Record<string, unknown>) => {
+  const createMockRequest = (body: Record<string, unknown>, headers: Record<string, string> = {}) => {
     return {
       method: 'POST',
       headers: {
         get: (key: string) => {
-          if (key.toLowerCase() === 'content-type') {
-            return 'application/json';
-          }
-          return null;
+          const allHeaders: Record<string, string> = {
+            'content-type': 'application/json',
+            ...headers,
+          };
+          return allHeaders[key.toLowerCase()] || null;
         },
       },
       json: async () => body,
@@ -44,7 +45,7 @@ describe('/api/track/append endpoint', () => {
     scrolled_percentage: 75,
   };
 
-  describe('POST /api/track/append - Valid updates', () => {
+  describe('POST /api/metrics/append - Valid updates', () => {
     it('should accept valid append with both duration and scroll percentage', async () => {
       // Mock successful database update
       (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => {
@@ -197,7 +198,7 @@ describe('/api/track/append endpoint', () => {
     });
   });
 
-  describe('POST /api/track/append - Validation errors', () => {
+  describe('POST /api/metrics/append - Validation errors', () => {
     it('should reject invalid page_id format', async () => {
       const invalidPayload = {
         page_id: 'invalid-cuid-format', // Not a valid CUID
@@ -278,7 +279,7 @@ describe('/api/track/append endpoint', () => {
     });
   });
 
-  describe('POST /api/track/append - 404 handling', () => {
+  describe('POST /api/metrics/append - 404 handling', () => {
     it('should return 404 if page_id does not exist', async () => {
       // Mock pageview not found
       (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => {
@@ -305,7 +306,7 @@ describe('/api/track/append endpoint', () => {
     });
   });
 
-  describe('POST /api/track/append - CORS headers', () => {
+  describe('POST /api/metrics/append - CORS headers', () => {
     it('should apply CORS headers to successful response', async () => {
       // Mock successful database update
       (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => {
@@ -318,11 +319,11 @@ describe('/api/track/append endpoint', () => {
         return await callback(mockTx);
       });
 
-      const request = createMockRequest(validPayload);
+      const request = createMockRequest(validPayload, { origin: 'https://franksblog.nl' });
       const response = await POST(request);
 
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://franksblog.nl');
-      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('POST, OPTIONS');
+      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, OPTIONS');
       expect(response.headers.get('Access-Control-Allow-Headers')).toBe('Content-Type');
     });
 
@@ -332,7 +333,7 @@ describe('/api/track/append endpoint', () => {
         duration_seconds: 45,
       };
 
-      const request = createMockRequest(invalidPayload);
+      const request = createMockRequest(invalidPayload, { origin: 'https://franksblog.nl' });
       const response = await POST(request);
 
       expect(response.status).toBe(400);
@@ -340,7 +341,7 @@ describe('/api/track/append endpoint', () => {
     });
   });
 
-  describe('POST /api/track/append - Database errors', () => {
+  describe('POST /api/metrics/append - Database errors', () => {
     it('should handle database errors gracefully and return 500', async () => {
       // Mock database error (not the PAGEVIEW_NOT_FOUND error)
       (prisma.$transaction as jest.Mock).mockRejectedValue(
@@ -357,13 +358,19 @@ describe('/api/track/append endpoint', () => {
     });
   });
 
-  describe('OPTIONS /api/track/append - CORS preflight', () => {
+  describe('OPTIONS /api/metrics/append - CORS preflight', () => {
     it('should handle OPTIONS request with correct CORS headers', async () => {
-      const response = await OPTIONS();
+      const request = new NextRequest('http://localhost:3000/api/metrics/append', {
+        method: 'OPTIONS',
+        headers: {
+          origin: 'https://franksblog.nl',
+        },
+      });
+      const response = await OPTIONS(request);
 
       expect(response.status).toBe(204);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://franksblog.nl');
-      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('POST, OPTIONS');
+      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, OPTIONS');
       expect(response.headers.get('Access-Control-Allow-Headers')).toBe('Content-Type');
       expect(response.headers.get('Access-Control-Max-Age')).toBe('86400');
     });

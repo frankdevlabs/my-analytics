@@ -4,7 +4,7 @@
  * unique visitor detection, and country code extraction
  */
 
-import { POST, OPTIONS } from '../../app/api/track/route';
+import { POST, OPTIONS } from '../../app/api/metrics/route';
 import { prisma } from 'lib/db/prisma';
 import { checkAndRecordVisitor } from 'lib/privacy/visitor-tracking';
 import { lookupCountryCode } from 'lib/geoip/maxmind-reader';
@@ -93,7 +93,7 @@ describe('Enhanced /api/track endpoint (36 fields)', () => {
     visibility_changes: 0,
   };
 
-  describe('POST /api/track - 36 field support', () => {
+  describe('POST /api/metrics - 36 field support', () => {
     it('should accept POST request with all 36 fields and return 204 No Content', async () => {
       // Mock dependencies
       (checkAndRecordVisitor as jest.Mock).mockResolvedValue(true);
@@ -115,7 +115,7 @@ describe('Enhanced /api/track endpoint (36 fields)', () => {
       expect(createData.page_id).toBe(validPayload.page_id);
       expect(createData.hostname).toBe(validPayload.hostname);
       expect(createData.path).toBe(validPayload.path);
-      expect(createData.browser_name).toBe('Chrome'); // Parsed from UA
+      expect(createData.browser_name).toBe('Google Chrome'); // Parsed from UA
       expect(createData.is_bot).toBe(false);
       expect(createData.is_unique).toBe(true);
       expect(createData.country_code).toBe('US');
@@ -224,11 +224,11 @@ describe('Enhanced /api/track endpoint (36 fields)', () => {
       (lookupCountryCode as jest.Mock).mockReturnValue('US');
       (prisma.$transaction as jest.Mock).mockResolvedValue({});
 
-      const request = createMockRequest(validPayload);
+      const request = createMockRequest(validPayload, { origin: 'https://franksblog.nl' });
       const response = await POST(request);
 
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://franksblog.nl');
-      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('POST, OPTIONS');
+      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, OPTIONS');
     });
 
     it('should gracefully handle Redis failure and set is_unique to false', async () => {
@@ -251,13 +251,19 @@ describe('Enhanced /api/track endpoint (36 fields)', () => {
     });
   });
 
-  describe('OPTIONS /api/track - CORS preflight', () => {
+  describe('OPTIONS /api/metrics - CORS preflight', () => {
     it('should handle OPTIONS request with correct CORS headers', async () => {
-      const response = await OPTIONS();
+      const request = new NextRequest('http://localhost:3000/api/metrics', {
+        method: 'OPTIONS',
+        headers: {
+          origin: 'https://franksblog.nl',
+        },
+      });
+      const response = await OPTIONS(request);
 
       expect(response.status).toBe(204);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://franksblog.nl');
-      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('POST, OPTIONS');
+      expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, OPTIONS');
       expect(response.headers.get('Access-Control-Allow-Headers')).toBe('Content-Type');
     });
   });
