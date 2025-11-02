@@ -84,7 +84,7 @@ async function backfillReferrerData(): Promise<void> {
       return;
     }
 
-    const totalBatches = Math.ceil(totalCount / BATCH_SIZE);
+    const _totalBatches = Math.ceil(totalCount / BATCH_SIZE);
     let processedCount = 0;
     let batchNumber = 0;
 

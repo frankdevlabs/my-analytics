@@ -55,22 +55,22 @@ function createValidPayload() {
 
 describe('Anti-Tracking Transport Methods Integration', () => {
   // Local spy declarations (not global mocks)
-  let mockGetCorsHeaders: jest.SpyInstance;
+  let _mockGetCorsHeaders: jest.SpyInstance;
   let mockPrismaTransaction: jest.SpyInstance;
-  let mockParseUserAgent: jest.SpyInstance;
-  let mockExtractMajorVersion: jest.SpyInstance;
-  let mockLookupCountryCode: jest.SpyInstance;
-  let mockGenerateVisitorHash: jest.SpyInstance;
-  let mockCheckAndRecordVisitor: jest.SpyInstance;
-  let mockGetOrCreateSession: jest.SpyInstance;
-  let mockUpdateSession: jest.SpyInstance;
-  let mockRecordVisitorActivity: jest.SpyInstance;
+  let _mockParseUserAgent: jest.SpyInstance;
+  let _mockExtractMajorVersion: jest.SpyInstance;
+  let _mockLookupCountryCode: jest.SpyInstance;
+  let _mockGenerateVisitorHash: jest.SpyInstance;
+  let _mockCheckAndRecordVisitor: jest.SpyInstance;
+  let _mockGetOrCreateSession: jest.SpyInstance;
+  let _mockUpdateSession: jest.SpyInstance;
+  let _mockRecordVisitorActivity: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     // Set up local spies with default implementations
-    mockGetCorsHeaders = jest.spyOn(corsConfig, 'getCorsHeaders').mockReturnValue({
+    _mockGetCorsHeaders = jest.spyOn(corsConfig, 'getCorsHeaders').mockReturnValue({
       'Access-Control-Allow-Origin': 'http://localhost:3001',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
@@ -80,21 +80,21 @@ describe('Anti-Tracking Transport Methods Integration', () => {
 
     mockPrismaTransaction = jest.spyOn(prisma, '$transaction').mockResolvedValue(undefined);
 
-    mockParseUserAgent = jest.spyOn(uaParser, 'parseUserAgent').mockReturnValue({
+    _mockParseUserAgent = jest.spyOn(uaParser, 'parseUserAgent').mockReturnValue({
       browser: 'Chrome',
       os: 'Windows',
       device_type: 'desktop',
     });
 
-    mockExtractMajorVersion = jest.spyOn(versionExtractor, 'extractMajorVersion').mockReturnValue('120');
+    _mockExtractMajorVersion = jest.spyOn(versionExtractor, 'extractMajorVersion').mockReturnValue('120');
 
-    mockLookupCountryCode = jest.spyOn(maxmindReader, 'lookupCountryCode').mockReturnValue('US');
+    _mockLookupCountryCode = jest.spyOn(maxmindReader, 'lookupCountryCode').mockReturnValue('US');
 
-    mockGenerateVisitorHash = jest.spyOn(visitorHash, 'generateVisitorHash').mockReturnValue('test-hash-123');
+    _mockGenerateVisitorHash = jest.spyOn(visitorHash, 'generateVisitorHash').mockReturnValue('test-hash-123');
 
-    mockCheckAndRecordVisitor = jest.spyOn(visitorTracking, 'checkAndRecordVisitor').mockResolvedValue(true);
+    _mockCheckAndRecordVisitor = jest.spyOn(visitorTracking, 'checkAndRecordVisitor').mockResolvedValue(true);
 
-    mockGetOrCreateSession = jest.spyOn(sessionStorage, 'getOrCreateSession').mockResolvedValue({
+    _mockGetOrCreateSession = jest.spyOn(sessionStorage, 'getOrCreateSession').mockResolvedValue({
       start_time: new Date().toISOString(),
       page_count: 1,
       last_seen: new Date().toISOString(),
@@ -102,7 +102,7 @@ describe('Anti-Tracking Transport Methods Integration', () => {
       utm_params: {},
     });
 
-    mockUpdateSession = jest.spyOn(sessionStorage, 'updateSession').mockResolvedValue({
+    _mockUpdateSession = jest.spyOn(sessionStorage, 'updateSession').mockResolvedValue({
       start_time: new Date().toISOString(),
       page_count: 2,
       last_seen: new Date().toISOString(),
@@ -110,7 +110,7 @@ describe('Anti-Tracking Transport Methods Integration', () => {
       utm_params: {},
     });
 
-    mockRecordVisitorActivity = jest.spyOn(activeVisitorTracking, 'recordVisitorActivity').mockResolvedValue(undefined);
+    _mockRecordVisitorActivity = jest.spyOn(activeVisitorTracking, 'recordVisitorActivity').mockResolvedValue(undefined);
   });
 
   afterEach(() => {

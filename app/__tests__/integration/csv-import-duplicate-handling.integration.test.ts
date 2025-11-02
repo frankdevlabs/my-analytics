@@ -25,7 +25,6 @@
  */
 
 import { prisma } from 'lib/db/prisma';
-import { Prisma, DeviceType } from '@prisma/client';
 import { insertPageviewBatch } from '../../lib/import/batch-inserter';
 import { mapCsvRowToPageview } from '../../lib/import/field-mapper';
 import { validateCsvPageview } from '../../lib/import/validation-adapter';

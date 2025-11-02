@@ -187,7 +187,7 @@ async function testRedisConnection(): Promise<boolean> {
 async function generatePrismaClient(): Promise<boolean> {
   try {
     logInfo('Generating Prisma Client...');
-    const { stdout, stderr } = await execAsync('npx prisma generate');
+    const { stdout: _stdout, stderr } = await execAsync('npx prisma generate');
 
     if (stderr && !stderr.includes('Generated Prisma Client')) {
       console.error(stderr);

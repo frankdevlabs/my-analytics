@@ -71,7 +71,7 @@ export async function closeRedisClient(): Promise<void> {
     try {
       // disconnect() is more forceful than quit() and better for test cleanup
       await redisClient.disconnect();
-    } catch (error) {
+    } catch (_error) {
       // Ignore errors during disconnect
     }
     redisClient = null;

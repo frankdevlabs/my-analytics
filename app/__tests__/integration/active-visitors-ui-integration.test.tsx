@@ -12,7 +12,7 @@
  */
 
 import * as React from 'react';
-import { render, screen, waitFor, act, cleanup } from '@testing-library/react';
+import { render, screen, waitFor, act as _act, cleanup } from '@testing-library/react';
 import { ActiveVisitorBadge } from '@/components/dashboard/active-visitor-badge';
 import { getRedisClient, getRedisKey } from 'lib/redis';
 

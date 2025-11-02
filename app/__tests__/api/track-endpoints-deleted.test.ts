@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 
 describe('Old /api/track endpoints should be deleted', () => {
   it('should return 404 for /api/track', async () => {
-    const request = new NextRequest('http://localhost:3000/api/track', {
+    const _request = new NextRequest('http://localhost:3000/api/track', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -19,7 +19,7 @@ describe('Old /api/track endpoints should be deleted', () => {
     let routeExists = true;
     try {
       await import('@/app/api/track/route');
-    } catch (error) {
+    } catch (_error) {
       routeExists = false;
     }
 
@@ -31,7 +31,7 @@ describe('Old /api/track endpoints should be deleted', () => {
     let routeExists = true;
     try {
       await import('@/app/api/track/append/route');
-    } catch (error) {
+    } catch (_error) {
       routeExists = false;
     }
 
@@ -43,7 +43,7 @@ describe('Old /api/track endpoints should be deleted', () => {
     let routeExists = true;
     try {
       await import('@/app/api/track/event/route');
-    } catch (error) {
+    } catch (_error) {
       routeExists = false;
     }
 

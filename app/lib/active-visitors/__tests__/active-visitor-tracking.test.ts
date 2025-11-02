@@ -34,7 +34,6 @@ describe('Active Visitor Tracking Service', () => {
       zCount: jest.fn().mockResolvedValue(0),
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockGetRedisClient.mockResolvedValue(mockRedisClient as any);
 
     // Spy on console.error to verify error logging

@@ -24,8 +24,8 @@ import * as visitorTracking from 'lib/privacy/visitor-tracking';
 
 describe('Active Visitors E2E Integration Tests', () => {
   let redisClient: Awaited<ReturnType<typeof getRedisClient>>;
-  let mockLookupCountryCode: jest.SpyInstance;
-  let mockCheckAndRecordVisitor: jest.SpyInstance;
+  let _mockLookupCountryCode: jest.SpyInstance;
+  let _mockCheckAndRecordVisitor: jest.SpyInstance;
 
   beforeAll(async () => {
     // Generate unique Redis prefix for this test file to prevent key collisions between test files
@@ -40,8 +40,8 @@ describe('Active Visitors E2E Integration Tests', () => {
 
   beforeEach(async () => {
     // Set up local mocks (not global - isolated to this test file)
-    mockLookupCountryCode = jest.spyOn(maxmindReader, 'lookupCountryCode').mockReturnValue('US');
-    mockCheckAndRecordVisitor = jest.spyOn(visitorTracking, 'checkAndRecordVisitor').mockResolvedValue(true);
+    _mockLookupCountryCode = jest.spyOn(maxmindReader, 'lookupCountryCode').mockReturnValue('US');
+    _mockCheckAndRecordVisitor = jest.spyOn(visitorTracking, 'checkAndRecordVisitor').mockResolvedValue(true);
 
     if (redisClient) {
       try {

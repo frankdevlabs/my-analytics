@@ -55,7 +55,7 @@ describe('Prisma Seed Script - Integration Tests', () => {
     (disconnectPrisma as jest.Mock).mockResolvedValue(undefined);
 
     // Dynamically import and execute seed (mocked version)
-    const seedModule = await import('../seed');
+    const _seedModule = await import('../seed');
 
     // Wait for seed to complete
     await new Promise(resolve => setTimeout(resolve, 100));

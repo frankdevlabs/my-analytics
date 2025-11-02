@@ -125,7 +125,7 @@ async function runMigrations(): Promise<boolean> {
   const testDatabaseUrl = `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${TEST_DB_NAME}`;
 
   try {
-    const { stdout, stderr } = await execAsync(
+    const { stdout, stderr: _stderr } = await execAsync(
       `DATABASE_URL="${testDatabaseUrl}" npx prisma migrate deploy`,
       {
         cwd: process.cwd(),
@@ -142,7 +142,7 @@ async function runMigrations(): Promise<boolean> {
   } catch (error) {
     console.error('❌ Migration failed:');
     if (error instanceof Error && 'stderr' in error) {
-      console.error((error as any).stderr || error.message);
+      console.error((error as Error & { stderr: string }).stderr || error.message);
     } else {
       console.error(error instanceof Error ? error.message : String(error));
     }

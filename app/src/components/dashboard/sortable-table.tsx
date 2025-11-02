@@ -100,7 +100,7 @@ export function SortableTable({
    * Enter or Space triggers sort
    */
   const handleKeyDown = React.useCallback((
-    event: React.KeyboardEvent<HTMLTableCellElement>,
+    event: React.KeyboardEvent<HTMLButtonElement>,
     columnKey: string
   ) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -189,17 +189,17 @@ export function SortableTable({
                     key={column.key}
                     className={`py-2 px-4 font-body text-sm font-semibold min-w-[120px] ${alignClass}`}
                     scope="col"
+                    aria-sort={
+                      isCurrentSort
+                        ? sortDirection === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
                   >
                     <button
                       type="button"
                       className="w-full cursor-pointer hover:bg-foreground/5 transition-colors focus:outline-none focus:ring-2 focus:ring-foreground/20 rounded px-0 py-0 bg-transparent border-none font-body text-sm font-semibold"
-                      aria-sort={
-                        isCurrentSort
-                          ? sortDirection === 'asc'
-                            ? 'ascending'
-                            : 'descending'
-                          : 'none'
-                      }
                       onClick={() => handleSort(column.key)}
                       onKeyDown={(e) => handleKeyDown(e, column.key)}
                     >

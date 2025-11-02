@@ -45,7 +45,7 @@ describe('Tracker.js Critical Behaviors', () => {
       try {
         const params = new URLSearchParams(searchString);
         return params.get('utm_source') || null;
-      } catch (_e) {
+      } catch {
         return null;
       }
     }

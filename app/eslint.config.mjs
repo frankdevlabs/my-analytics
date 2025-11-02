@@ -9,6 +9,19 @@ const eslintConfig = [
   ...nextCoreWebVitals,
   // Extend Next.js TypeScript config (native flat format)
   ...nextTypescript,
+  // Global rules for unused variables (allow underscore prefix)
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
   // Allow CommonJS require() in .cjs files and scripts (configuration/utility files)
   {
     files: ["**/*.cjs", "scripts/**/*.ts"],

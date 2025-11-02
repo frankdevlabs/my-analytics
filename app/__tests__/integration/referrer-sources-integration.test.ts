@@ -19,12 +19,12 @@ import { extractDomainFromUrl, getCategoryFromDomain } from 'lib/config/referrer
 
 describe('Referrer Sources Integration Tests', () => {
   let mockQueryRaw: jest.SpyInstance;
-  let mockGroupBy: jest.SpyInstance;
+  let _mockGroupBy: jest.SpyInstance;
 
   beforeEach(() => {
     // Set up local mocks (not global - isolated to this test file)
     mockQueryRaw = jest.spyOn(prisma, '$queryRaw' as any);
-    mockGroupBy = jest.spyOn(prisma.pageview, 'groupBy');
+    _mockGroupBy = jest.spyOn(prisma.pageview, 'groupBy');
   });
 
   afterEach(() => {

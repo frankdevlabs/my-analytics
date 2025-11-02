@@ -128,7 +128,7 @@ module.exports = async () => {
     const databaseUrl = await ensureTestDatabase();
     await truncateDatabase(databaseUrl);
     console.log('✅ Test database ready');
-  } catch (error) {
+  } catch (_error) {
     console.error('Test database setup failed. Tests may fail.');
     // Don't throw - let tests run and fail with better error messages
   }

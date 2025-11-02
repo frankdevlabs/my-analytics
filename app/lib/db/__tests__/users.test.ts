@@ -147,7 +147,6 @@ describe('createUser', () => {
     };
 
     let capturedData: Prisma.UserCreateInput | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     prismaMock.$transaction.mockImplementation(async (fn: any) => {
       const mockTx = {
         user: {
