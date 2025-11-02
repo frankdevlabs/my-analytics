@@ -94,6 +94,19 @@ export const PageviewPayloadSchema = z.object({
     .or(z.literal(''))
     .transform(val => val === '' ? undefined : val),
 
+  // Referrer domain: extracted domain from document_referrer (server-side)
+  referrer_domain: z
+    .string()
+    .max(255, 'Referrer domain must be at most 255 characters')
+    .nullable()
+    .optional(),
+
+  // Referrer category: categorized referrer source (server-side)
+  referrer_category: z
+    .string()
+    .max(50, 'Referrer category must be at most 50 characters')
+    .optional(),
+
   // ============================================
   // Device & Browser (9 fields)
   // ============================================

@@ -244,6 +244,8 @@ async function insertBatchWithPreQueryFiltering(
             query_string: pv.query_string ?? null,
             document_title: pv.document_title ?? null,
             document_referrer: pv.document_referrer ?? null,
+            referrer_domain: pv.referrer_domain ?? null,
+            referrer_category: pv.referrer_category ?? null,
             is_internal_referrer: pv.is_internal_referrer,
             device_type: pv.device_type,
             browser_name: pv.browser_name ?? null,
