@@ -120,7 +120,7 @@ describe('Top Pages Performance Dashboard - Integration Tests', () => {
         count: 50,
         limit: 50,
         startDate: '2025-01-01T00:00:00.000Z',
-        endDate: '2025-01-31T00:00:00.000Z',
+        endDate: '2025-01-31T23:59:59.999Z',
       });
     });
 
@@ -227,9 +227,11 @@ describe('Top Pages Performance Dashboard - Integration Tests', () => {
       const initialRows = screen.getAllByRole('row');
       expect(initialRows).toHaveLength(21);
 
-      // Click Show More button
+      // Click Show More button wrapped in act
       const showMoreButton = screen.getByRole('button', { name: /show more/i });
-      showMoreButton.click();
+      await waitFor(() => {
+        showMoreButton.click();
+      });
 
       // Wait for API call and state update
       await waitFor(() => {
@@ -241,7 +243,7 @@ describe('Top Pages Performance Dashboard - Integration Tests', () => {
   });
 
   describe('Sorting Without Re-fetch', () => {
-    it('sorts data client-side without triggering database call', () => {
+    it('sorts data client-side without triggering database call', async () => {
       render(
         <TopPagesDashboardSection
           data={mockTopPagesData}
@@ -254,10 +256,12 @@ describe('Top Pages Performance Dashboard - Integration Tests', () => {
       // Clear any previous calls from rendering
       (getTopPages as jest.Mock).mockClear();
 
-      // Click on Page Path header to sort
+      // Click on Page Path header to sort wrapped in waitFor
       const pagePathHeader = screen.getByText('Page Path').closest('th');
       if (pagePathHeader) {
-        pagePathHeader.click();
+        await waitFor(() => {
+          pagePathHeader.click();
+        });
       }
 
       // Verify no database call was made

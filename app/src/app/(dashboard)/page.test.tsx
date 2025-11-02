@@ -14,6 +14,11 @@ jest.mock('@/lib/db/pageviews', () => ({
   getUniqueVisitors: jest.fn(),
   getTopPages: jest.fn(),
   getPageviewsOverTime: jest.fn(),
+  getPageviewsByCountry: jest.fn(),
+  getReferrersByCategory: jest.fn(),
+  getReferrersByDomain: jest.fn(),
+  getDeviceTypeBreakdown: jest.fn(),
+  getBrowserBreakdown: jest.fn(),
 }));
 
 // Mock the date utils
@@ -43,13 +48,13 @@ jest.mock('@/components/dashboard/metric-card', () => ({
   ),
 }));
 
-jest.mock('@/components/dashboard/top-pages-table', () => ({
-  TopPagesTable: ({ data, error }: { data: unknown; error: string | null }) => (
-    <div data-testid="top-pages-table">
+jest.mock('@/components/dashboard/TopPagesDashboardSection', () => ({
+  TopPagesDashboardSection: ({ data, error }: { data: unknown; error: string | null }) => (
+    <div data-testid="top-pages">
       {error ? (
-        <span data-testid="table-error">{error}</span>
+        <span data-testid="error">{error}</span>
       ) : (
-        <span data-testid="table-data">{JSON.stringify(data)}</span>
+        <span data-testid="data">{Array.isArray(data) ? data.length : 0} pages</span>
       )}
     </div>
   ),
@@ -102,9 +107,30 @@ describe('Dashboard Page', () => {
   const mockGetPageviewsOverTime = pageviewsDb.getPageviewsOverTime as jest.MockedFunction<
     typeof pageviewsDb.getPageviewsOverTime
   >;
+  const mockGetPageviewsByCountry = pageviewsDb.getPageviewsByCountry as jest.MockedFunction<
+    typeof pageviewsDb.getPageviewsByCountry
+  >;
+  const mockGetReferrersByCategory = pageviewsDb.getReferrersByCategory as jest.MockedFunction<
+    typeof pageviewsDb.getReferrersByCategory
+  >;
+  const mockGetReferrersByDomain = pageviewsDb.getReferrersByDomain as jest.MockedFunction<
+    typeof pageviewsDb.getReferrersByDomain
+  >;
+  const mockGetDeviceTypeBreakdown = pageviewsDb.getDeviceTypeBreakdown as jest.MockedFunction<
+    typeof pageviewsDb.getDeviceTypeBreakdown
+  >;
+  const mockGetBrowserBreakdown = pageviewsDb.getBrowserBreakdown as jest.MockedFunction<
+    typeof pageviewsDb.getBrowserBreakdown
+  >;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Provide default mocks for all database functions to prevent worker crashes
+    mockGetPageviewsByCountry.mockResolvedValue([]);
+    mockGetReferrersByCategory.mockResolvedValue([]);
+    mockGetReferrersByDomain.mockResolvedValue([]);
+    mockGetDeviceTypeBreakdown.mockResolvedValue([]);
+    mockGetBrowserBreakdown.mockResolvedValue([]);
   });
 
   it('should fetch and display metrics correctly with valid dates', async () => {
@@ -130,23 +156,26 @@ describe('Dashboard Page', () => {
     expect(metricValues[1]).toHaveTextContent('3456');
 
     // Check that top pages are displayed
-    const tableData = screen.getByTestId('table-data');
-    expect(tableData).toHaveTextContent('/home');
-    expect(tableData).toHaveTextContent('/about');
+    const topPages = screen.getByTestId('top-pages');
+    expect(topPages).toHaveTextContent('2 pages');
 
     // Verify database functions were called with correct dates
+    // End date is set to end of day (23:59:59.999 UTC) in page.tsx
+    const expectedEndDate = new Date('2025-10-07');
+    expectedEndDate.setUTCHours(23, 59, 59, 999);
+
     expect(mockGetPageviewsInDateRange).toHaveBeenCalledWith(
       new Date('2025-10-01'),
-      new Date('2025-10-07')
+      expectedEndDate
     );
     expect(mockGetUniqueVisitors).toHaveBeenCalledWith(
       new Date('2025-10-01'),
-      new Date('2025-10-07')
+      expectedEndDate
     );
     expect(mockGetTopPages).toHaveBeenCalledWith(
       new Date('2025-10-01'),
-      new Date('2025-10-07'),
-      10
+      expectedEndDate,
+      20
     );
   });
 
@@ -161,18 +190,22 @@ describe('Dashboard Page', () => {
     render(await DashboardPage({ searchParams }));
 
     // Verify database functions were called with default dates
+    // End date is set to end of day (23:59:59.999 UTC) in page.tsx
+    const expectedEndDate = new Date('2025-10-24');
+    expectedEndDate.setUTCHours(23, 59, 59, 999);
+
     expect(mockGetPageviewsInDateRange).toHaveBeenCalledWith(
       new Date('2025-10-17'),
-      new Date('2025-10-24')
+      expectedEndDate
     );
     expect(mockGetUniqueVisitors).toHaveBeenCalledWith(
       new Date('2025-10-17'),
-      new Date('2025-10-24')
+      expectedEndDate
     );
     expect(mockGetTopPages).toHaveBeenCalledWith(
       new Date('2025-10-17'),
-      new Date('2025-10-24'),
-      10
+      expectedEndDate,
+      20
     );
 
     // Verify date range selector shows default dates
@@ -200,8 +233,8 @@ describe('Dashboard Page', () => {
     expect(metricError).toHaveTextContent('Unable to load visitors data');
 
     // Verify top pages still displays
-    const tableData = screen.getByTestId('table-data');
-    expect(tableData).toHaveTextContent('/test');
+    const topPages = screen.getByTestId('top-pages');
+    expect(topPages).toHaveTextContent('1 pages');
   });
 
   it('should parse URL searchParams correctly', async () => {
@@ -219,9 +252,13 @@ describe('Dashboard Page', () => {
     expect(dateSelector).toHaveTextContent('2025-09-01 to 2025-09-30');
 
     // Verify database queries used the URL params
+    // End date is set to end of day (23:59:59.999 UTC) in page.tsx
+    const expectedEndDate = new Date('2025-09-30');
+    expectedEndDate.setUTCHours(23, 59, 59, 999);
+
     expect(mockGetPageviewsInDateRange).toHaveBeenCalledWith(
       new Date('2025-09-01'),
-      new Date('2025-09-30')
+      expectedEndDate
     );
   });
 
@@ -264,9 +301,13 @@ describe('Dashboard Page', () => {
       render(await DashboardPage({ searchParams }));
 
       // Verify getPageviewsOverTime was called with correct date range
+      // End date is set to end of day (23:59:59.999 UTC) in page.tsx
+      const expectedEndDate = new Date('2025-09-20');
+      expectedEndDate.setUTCHours(23, 59, 59, 999);
+
       expect(mockGetPageviewsOverTime).toHaveBeenCalledWith(
         new Date('2025-09-15'),
-        new Date('2025-09-20')
+        expectedEndDate
       );
     });
 
@@ -290,7 +331,7 @@ describe('Dashboard Page', () => {
 
       // Verify all components rendered successfully
       expect(screen.getByTestId('pageviews-chart')).toBeInTheDocument();
-      expect(screen.getByTestId('top-pages-table')).toBeInTheDocument();
+      expect(screen.getByTestId('top-pages')).toBeInTheDocument();
       expect(screen.getAllByTestId('metric-card')).toHaveLength(2);
     });
 
@@ -313,8 +354,8 @@ describe('Dashboard Page', () => {
       expect(metricValues[0]).toHaveTextContent('5000');
       expect(metricValues[1]).toHaveTextContent('2000');
 
-      const tableData = screen.getByTestId('table-data');
-      expect(tableData).toHaveTextContent('/home');
+      const topPages = screen.getByTestId('top-pages');
+      expect(topPages).toHaveTextContent('1 pages');
     });
 
     it('should render empty chart when no data available for date range', async () => {
@@ -347,9 +388,13 @@ describe('Dashboard Page', () => {
       render(await DashboardPage({ searchParams }));
 
       // Verify getPageviewsOverTime was called with default date range
+      // End date is set to end of day (23:59:59.999 UTC) in page.tsx
+      const expectedEndDate = new Date('2025-10-24');
+      expectedEndDate.setUTCHours(23, 59, 59, 999);
+
       expect(mockGetPageviewsOverTime).toHaveBeenCalledWith(
         new Date('2025-10-17'),
-        new Date('2025-10-24')
+        expectedEndDate
       );
     });
 

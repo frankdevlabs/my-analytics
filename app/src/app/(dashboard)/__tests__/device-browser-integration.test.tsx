@@ -202,11 +202,15 @@ describe('Dashboard Device and Browser Analytics Integration', () => {
     // Verify queries were called with correct date parameters
     const deviceCallArgs = (getDeviceTypeBreakdown as jest.Mock).mock.calls[0];
     expect(deviceCallArgs[0]).toEqual(new Date('2025-10-01'));
-    expect(deviceCallArgs[1]).toEqual(new Date('2025-10-31'));
+    // End date is set to end of day (23:59:59.999 UTC) in page.tsx
+    const expectedEndDate = new Date('2025-10-31');
+    expectedEndDate.setUTCHours(23, 59, 59, 999);
+    expect(deviceCallArgs[1]).toEqual(expectedEndDate);
 
     const browserCallArgs = (getBrowserBreakdown as jest.Mock).mock.calls[0];
     expect(browserCallArgs[0]).toEqual(new Date('2025-10-01'));
-    expect(browserCallArgs[1]).toEqual(new Date('2025-10-31'));
+    // End date is set to end of day (23:59:59.999 UTC) in page.tsx
+    expect(browserCallArgs[1]).toEqual(expectedEndDate);
     expect(browserCallArgs[2]).toBe(5); // Top 5 browsers
   });
 

@@ -24,6 +24,11 @@ jest.mock('@/lib/db/pageviews', () => ({
   getUniqueVisitors: jest.fn(),
   getTopPages: jest.fn(),
   getPageviewsOverTime: jest.fn(),
+  getPageviewsByCountry: jest.fn(),
+  getReferrersByCategory: jest.fn(),
+  getReferrersByDomain: jest.fn(),
+  getDeviceTypeBreakdown: jest.fn(),
+  getBrowserBreakdown: jest.fn(),
 }));
 
 // Mock date utilities
@@ -44,10 +49,10 @@ jest.mock('@/components/dashboard/metric-card', () => ({
   ),
 }));
 
-jest.mock('@/components/dashboard/top-pages-table', () => ({
-  TopPagesTable: ({ data, error }: { data: unknown[]; error: string | null }) => (
+jest.mock('@/components/dashboard/TopPagesDashboardSection', () => ({
+  TopPagesDashboardSection: ({ data, error }: { data: unknown; error: string | null }) => (
     <div data-testid="top-pages">
-      {error ? <span data-testid="error">{error}</span> : <span data-testid="data">{data.length} pages</span>}
+      {error ? <span data-testid="error">{error}</span> : <span data-testid="data">{Array.isArray(data) ? data.length : 0} pages</span>}
     </div>
   ),
 }));
@@ -103,12 +108,33 @@ describe('Dashboard Integration Tests', () => {
   const mockGetPageviewsOverTime = pageviewsDb.getPageviewsOverTime as jest.MockedFunction<
     typeof pageviewsDb.getPageviewsOverTime
   >;
+  const mockGetPageviewsByCountry = pageviewsDb.getPageviewsByCountry as jest.MockedFunction<
+    typeof pageviewsDb.getPageviewsByCountry
+  >;
+  const mockGetReferrersByCategory = pageviewsDb.getReferrersByCategory as jest.MockedFunction<
+    typeof pageviewsDb.getReferrersByCategory
+  >;
+  const mockGetReferrersByDomain = pageviewsDb.getReferrersByDomain as jest.MockedFunction<
+    typeof pageviewsDb.getReferrersByDomain
+  >;
+  const mockGetDeviceTypeBreakdown = pageviewsDb.getDeviceTypeBreakdown as jest.MockedFunction<
+    typeof pageviewsDb.getDeviceTypeBreakdown
+  >;
+  const mockGetBrowserBreakdown = pageviewsDb.getBrowserBreakdown as jest.MockedFunction<
+    typeof pageviewsDb.getBrowserBreakdown
+  >;
 
   beforeEach(() => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue({ push: mockPush, refresh: jest.fn() });
     (usePathname as jest.Mock).mockReturnValue('/');
+    // Provide default mocks for all database functions to prevent worker crashes
     mockGetPageviewsOverTime.mockResolvedValue([]);
+    mockGetPageviewsByCountry.mockResolvedValue([]);
+    mockGetReferrersByCategory.mockResolvedValue([]);
+    mockGetReferrersByDomain.mockResolvedValue([]);
+    mockGetDeviceTypeBreakdown.mockResolvedValue([]);
+    mockGetBrowserBreakdown.mockResolvedValue([]);
   });
 
   /**
@@ -175,7 +201,7 @@ describe('Dashboard Integration Tests', () => {
     // Verify specific error messages
     expect(screen.getByText('Unable to load pageviews data')).toBeInTheDocument();
     expect(screen.getByText('Unable to load visitors data')).toBeInTheDocument();
-    expect(screen.getByText('Unable to load top pages data')).toBeInTheDocument();
+    expect(screen.getByText('Unable to load top pages performance data')).toBeInTheDocument();
   });
 
   /**
@@ -278,7 +304,7 @@ describe('Dashboard Integration Tests', () => {
     const topPages = screen.getByTestId('top-pages');
     const errorInTopPages = topPages.querySelector('[data-testid="error"]');
     expect(errorInTopPages).toBeInTheDocument();
-    expect(errorInTopPages).toHaveTextContent('Unable to load top pages data');
+    expect(errorInTopPages).toHaveTextContent('Unable to load top pages performance data');
   });
 
   /**

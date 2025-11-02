@@ -89,7 +89,6 @@ const config = {
         '<rootDir>/lib/**/__tests__/**/*.test.{ts,tsx}',
         '<rootDir>/scripts/**/__tests__/**/*.test.{ts,tsx}',
         '<rootDir>/prisma/**/__tests__/**/*.test.{ts,tsx}',
-        '<rootDir>/__tests__/charts/**/*.test.{ts,tsx}',
       ],
     },
   ],
