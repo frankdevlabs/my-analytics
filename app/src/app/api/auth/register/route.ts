@@ -32,7 +32,15 @@ import { hashPassword } from 'lib/auth/hash';
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (_error) {
+      return NextResponse.json(
+        { error: 'Invalid request data' },
+        { status: 400 }
+      );
+    }
 
     // Validate request body with Zod schema
     const validationResult = registerSchema.safeParse(body);

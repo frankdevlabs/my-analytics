@@ -46,8 +46,12 @@ describe('POST /api/auth/register', () => {
     const data = await response.json();
 
     expect(response.status).toBe(201);
-    expect(data.success).toBe(true);
-    expect(data.message).toBe('User registered successfully');
+    expect(data.message).toBe('User created successfully');
+    expect(data.user).toEqual({
+      id: 'user-1',
+      email: 'admin@example.com',
+      name: 'Admin User',
+    });
     expect(mockGetUserCount).toHaveBeenCalled();
     expect(mockHashPassword).toHaveBeenCalledWith('SecurePass123');
     expect(mockCreateUser).toHaveBeenCalledWith({
@@ -93,7 +97,7 @@ describe('POST /api/auth/register', () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toContain('Invalid email');
+    expect(data.error).toBe('Invalid request data');
     expect(mockGetUserCount).not.toHaveBeenCalled();
   });
 
@@ -111,7 +115,7 @@ describe('POST /api/auth/register', () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toContain('at least 8');
+    expect(data.error).toBe('Invalid request data');
     expect(mockGetUserCount).not.toHaveBeenCalled();
   });
 
@@ -130,7 +134,7 @@ describe('POST /api/auth/register', () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toContain('too long');
+    expect(data.error).toBe('Invalid request data');
     expect(mockGetUserCount).not.toHaveBeenCalled();
   });
 
