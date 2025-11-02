@@ -3,7 +3,7 @@
  * Unit tests for password hashing and verification
  */
 
-import { hashPassword, verifyPassword } from './hash';
+import { hashPassword, verifyPassword } from '../hash';
 
 describe('Password Hashing', () => {
   describe('hashPassword', () => {
