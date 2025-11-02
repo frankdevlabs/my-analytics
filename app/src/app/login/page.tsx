@@ -4,6 +4,7 @@
  * Redirects to dashboard if user is already authenticated
  */
 
+import React from 'react';
 import { redirect } from 'next/navigation';
 import { auth } from '../../../lib/auth/config';
 import { LoginForm } from '@/components/auth/login-form';

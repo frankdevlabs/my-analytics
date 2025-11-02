@@ -61,7 +61,7 @@ describe('Proxy', () => {
       mockGetToken.mockResolvedValue(null);
       const request = createMockRequest('/login');
 
-      const response = await proxy(request);
+      const response = await proxy(request, {} as any);
 
       expect(response).toBeInstanceOf(NextResponse);
       // NextResponse.next() doesn't redirect, so no redirect property
@@ -72,7 +72,7 @@ describe('Proxy', () => {
       mockGetToken.mockResolvedValue(null);
       const request = createMockRequest('/api/track');
 
-      const response = await proxy(request);
+      const response = await proxy(request, {} as any);
 
       expect(response).toBeInstanceOf(NextResponse);
       expect(mockGetToken).not.toHaveBeenCalled();
@@ -82,7 +82,7 @@ describe('Proxy', () => {
       mockGetToken.mockResolvedValue(null);
       const request = createMockRequest('/api/auth/signin');
 
-      const response = await proxy(request);
+      const response = await proxy(request, {} as any);
 
       expect(response).toBeInstanceOf(NextResponse);
       expect(mockGetToken).not.toHaveBeenCalled();
@@ -92,7 +92,7 @@ describe('Proxy', () => {
       mockGetToken.mockResolvedValue(null);
       const request = createMockRequest('/api/auth/callback/credentials');
 
-      const response = await proxy(request);
+      const response = await proxy(request, {} as any);
 
       expect(response).toBeInstanceOf(NextResponse);
       expect(mockGetToken).not.toHaveBeenCalled();
@@ -102,7 +102,7 @@ describe('Proxy', () => {
       mockGetToken.mockResolvedValue(null);
       const request = createMockRequest('/fb-a7k2.js');
 
-      const response = await proxy(request);
+      const response = await proxy(request, {} as any);
 
       expect(response).toBeInstanceOf(NextResponse);
       expect(mockGetToken).not.toHaveBeenCalled();
@@ -113,7 +113,7 @@ describe('Proxy', () => {
     it('should serve tracker.js without authentication', async () => {
       const request = createMockRequest('/tracker.js', 'development');
 
-      const response = await proxy(request);
+      const response = await proxy(request, {} as any);
 
       expect(response).toBeInstanceOf(NextResponse);
       // In development, should rewrite to /tracker.js
@@ -123,7 +123,7 @@ describe('Proxy', () => {
     it('should rewrite tracker.js to tracker.min.js in production', async () => {
       const request = createMockRequest('/tracker.js', 'production');
 
-      const response = await proxy(request);
+      const response = await proxy(request, {} as any);
 
       expect(response).toBeInstanceOf(NextResponse);
       // Verify it's a rewrite response (implementation detail)
@@ -136,10 +136,10 @@ describe('Proxy', () => {
       mockGetToken.mockResolvedValue(null);
       const request = createMockRequest('/dashboard');
 
-      const response = await proxy(request);
+      const response = await proxy(request, {} as any);
 
       expect(response).toBeInstanceOf(NextResponse);
-      expect(response.status).toBe(307); // Redirect status
+      expect(response?.status).toBe(307); // Redirect status
       expect(mockGetToken).toHaveBeenCalled();
     });
 
@@ -147,13 +147,13 @@ describe('Proxy', () => {
       mockGetToken.mockResolvedValue(null);
       const request = createMockRequest('/dashboard/analytics');
 
-      const response = await proxy(request);
+      const response = await proxy(request, {} as any);
 
       expect(response).toBeInstanceOf(NextResponse);
-      expect(response.status).toBe(307);
+      expect(response?.status).toBe(307);
 
       // Check redirect URL includes callbackUrl
-      const redirectUrl = response.headers.get('location');
+      const redirectUrl = response?.headers.get('location');
       expect(redirectUrl).toContain('/login');
       expect(redirectUrl).toContain('callbackUrl=%2Fdashboard%2Fanalytics');
     });
@@ -162,10 +162,10 @@ describe('Proxy', () => {
       mockGetToken.mockResolvedValue(null);
       const request = createMockRequest('/');
 
-      const response = await proxy(request);
+      const response = await proxy(request, {} as any);
 
       expect(response).toBeInstanceOf(NextResponse);
-      expect(response.status).toBe(307);
+      expect(response?.status).toBe(307);
       expect(mockGetToken).toHaveBeenCalled();
     });
   });
@@ -180,11 +180,11 @@ describe('Proxy', () => {
 
       const request = createMockRequest('/dashboard');
 
-      const response = await proxy(request);
+      const response = await proxy(request, {} as any);
 
       expect(response).toBeInstanceOf(NextResponse);
       // Should not redirect - status should not be 307
-      expect(response.status).not.toBe(307);
+      expect(response?.status).not.toBe(307);
       expect(mockGetToken).toHaveBeenCalled();
     });
 
@@ -197,10 +197,10 @@ describe('Proxy', () => {
 
       const request = createMockRequest('/');
 
-      const response = await proxy(request);
+      const response = await proxy(request, {} as any);
 
       expect(response).toBeInstanceOf(NextResponse);
-      expect(response.status).not.toBe(307);
+      expect(response?.status).not.toBe(307);
       expect(mockGetToken).toHaveBeenCalled();
     });
 
@@ -213,10 +213,10 @@ describe('Proxy', () => {
 
       const request = createMockRequest('/settings/profile');
 
-      const response = await proxy(request);
+      const response = await proxy(request, {} as any);
 
       expect(response).toBeInstanceOf(NextResponse);
-      expect(response.status).not.toBe(307);
+      expect(response?.status).not.toBe(307);
       expect(mockGetToken).toHaveBeenCalled();
     });
   });
