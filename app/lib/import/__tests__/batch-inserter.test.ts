@@ -47,7 +47,8 @@ describe('insertPageviewBatch', () => {
     (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => {
       return callback({
         pageview: {
-          create: jest.fn().mockResolvedValue({}),
+          findMany: jest.fn().mockResolvedValue([]), // No existing records
+          createMany: jest.fn().mockResolvedValue({ count: 2 }),
         },
       });
     });
@@ -92,7 +93,8 @@ describe('insertPageviewBatch', () => {
       .mockImplementationOnce(async (callback) => {
         return callback({
           pageview: {
-            create: jest.fn().mockResolvedValue({}),
+            findMany: jest.fn().mockResolvedValue([]), // No existing records
+            createMany: jest.fn().mockResolvedValue({ count: 1 }),
           },
         });
       });
@@ -179,7 +181,8 @@ describe('insertPageviewBatch', () => {
     (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => {
       return callback({
         pageview: {
-          create: jest.fn().mockResolvedValue({}),
+          findMany: jest.fn().mockResolvedValue([]), // No existing records
+          createMany: jest.fn().mockResolvedValue({ count: 100 }),
         },
       });
     });
@@ -209,7 +212,8 @@ describe('insertPageviewBatch', () => {
     (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => {
       return callback({
         pageview: {
-          create: jest.fn().mockResolvedValue({}),
+          findMany: jest.fn().mockResolvedValue([]), // No existing records
+          createMany: jest.fn().mockResolvedValue({ count: 1 }),
         },
       });
     });
@@ -236,17 +240,19 @@ describe('insertPageviewBatch', () => {
       },
     ];
 
-    // Mock P2002 error (duplicate)
-    interface PrismaError extends Error {
-      code: string;
-    }
-    const duplicateError = new Error('Unique constraint violation') as PrismaError;
-    duplicateError.code = 'P2002';
-
+    // Mock existing record (duplicate detected via findMany)
     (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => {
       return callback({
         pageview: {
-          create: jest.fn().mockRejectedValue(duplicateError),
+          findMany: jest.fn().mockResolvedValue([
+            {
+              added_iso: new Date('2024-10-24T10:00:00.000Z'),
+              path: '/page-1',
+              session_id: null,
+              hostname: null,
+            },
+          ]),
+          createMany: jest.fn().mockResolvedValue({ count: 0 }),
         },
       });
     });
@@ -330,17 +336,31 @@ describe('insertPageviewBatch', () => {
       },
     ];
 
-    // Mock all as duplicates
-    interface PrismaError extends Error {
-      code: string;
-    }
-    const duplicateError = new Error('Unique constraint violation') as PrismaError;
-    duplicateError.code = 'P2002';
-
+    // Mock all as existing records (all duplicates)
     (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => {
       return callback({
         pageview: {
-          create: jest.fn().mockRejectedValue(duplicateError),
+          findMany: jest.fn().mockResolvedValue([
+            {
+              added_iso: new Date('2024-10-24T10:00:00.000Z'),
+              path: '/page-1',
+              session_id: null,
+              hostname: null,
+            },
+            {
+              added_iso: new Date('2024-10-24T10:01:00.000Z'),
+              path: '/page-2',
+              session_id: null,
+              hostname: null,
+            },
+            {
+              added_iso: new Date('2024-10-24T10:02:00.000Z'),
+              path: '/page-3',
+              session_id: null,
+              hostname: null,
+            },
+          ]),
+          createMany: jest.fn().mockResolvedValue({ count: 0 }),
         },
       });
     });
@@ -387,25 +407,19 @@ describe('insertPageviewBatch', () => {
       },
     ];
 
-    // Mock mixed results: first succeeds, second is duplicate, third succeeds
-    interface PrismaError extends Error {
-      code: string;
-    }
-    const duplicateError = new Error('Unique constraint violation') as PrismaError;
-    duplicateError.code = 'P2002';
-
-    let callCount = 0;
+    // Mock mixed results: second record is duplicate, first and third are new
     (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => {
       return callback({
         pageview: {
-          create: jest.fn().mockImplementation(() => {
-            callCount++;
-            if (callCount === 2) {
-              // Second record is duplicate
-              return Promise.reject(duplicateError);
-            }
-            return Promise.resolve({});
-          }),
+          findMany: jest.fn().mockResolvedValue([
+            {
+              added_iso: new Date('2024-10-24T10:01:00.000Z'),
+              path: '/page-2',
+              session_id: null,
+              hostname: null,
+            },
+          ]),
+          createMany: jest.fn().mockResolvedValue({ count: 2 }),
         },
       });
     });
@@ -462,31 +476,25 @@ describe('insertPageviewBatch', () => {
       },
     ];
 
-    // Mock mixed results: first succeeds, second is duplicate, third fails, fourth succeeds
+    // Mock mixed results: record 2 is duplicate (skipped), createMany fails for remaining records
     interface PrismaError extends Error {
       code: string;
     }
-    const duplicateError = new Error('Unique constraint violation') as PrismaError;
-    duplicateError.code = 'P2002';
-
     const validationError = new Error('Foreign key constraint violation') as PrismaError;
     validationError.code = 'P2003';
 
-    let callCount = 0;
     (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => {
       return callback({
         pageview: {
-          create: jest.fn().mockImplementation(() => {
-            callCount++;
-            if (callCount === 2) {
-              // Second record is duplicate
-              return Promise.reject(duplicateError);
-            } else if (callCount === 3) {
-              // Third record fails validation
-              return Promise.reject(validationError);
-            }
-            return Promise.resolve({});
-          }),
+          findMany: jest.fn().mockResolvedValue([
+            {
+              added_iso: new Date('2024-10-24T10:01:00.000Z'),
+              path: '/page-2',
+              session_id: null,
+              hostname: null,
+            },
+          ]),
+          createMany: jest.fn().mockRejectedValue(validationError),
         },
       });
     });
@@ -494,8 +502,8 @@ describe('insertPageviewBatch', () => {
     const result = await insertPageviewBatch(pageviews);
 
     expect(result.success).toBe(false); // Contains failures
-    expect(result.insertedCount).toBe(2);
-    expect(result.failedCount).toBe(1);
-    expect(result.skippedCount).toBe(1);
+    expect(result.insertedCount).toBe(0);
+    expect(result.failedCount).toBe(3); // 3 new records failed (1, 3, 4)
+    expect(result.skippedCount).toBe(1); // 1 duplicate (2)
   });
 });
