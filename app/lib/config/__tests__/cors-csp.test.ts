@@ -11,12 +11,20 @@ describe('CORS and CSP Configuration', () => {
 
   beforeAll(() => {
     // Set development mode for tests
-    process.env.NODE_ENV = 'development';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'development',
+      writable: true,
+      configurable: true,
+    });
   });
 
   afterAll(() => {
     // Restore original environment
-    process.env.NODE_ENV = originalEnv;
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: originalEnv,
+      writable: true,
+      configurable: true,
+    });
   });
 
   describe('CORS headers for /api/metrics paths', () => {
@@ -171,12 +179,20 @@ describe('CORS and CSP Configuration', () => {
 
   describe('Production environment validation', () => {
     beforeAll(() => {
-      process.env.NODE_ENV = 'production';
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: 'production',
+        writable: true,
+        configurable: true,
+      });
       process.env.ALLOWED_ORIGINS = 'https://franksblog.nl,https://example.com';
     });
 
     afterAll(() => {
-      process.env.NODE_ENV = 'development';
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: 'development',
+        writable: true,
+        configurable: true,
+      });
       delete process.env.ALLOWED_ORIGINS;
     });
 

@@ -69,11 +69,19 @@ describe('CORS and CSP Integration for Anti-Tracking Endpoints', () => {
   let _mockRecordVisitorActivity: jest.SpyInstance;
 
   beforeAll(() => {
-    process.env.NODE_ENV = 'development';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'development',
+      writable: true,
+      configurable: true,
+    });
   });
 
   afterAll(() => {
-    process.env.NODE_ENV = originalEnv;
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: originalEnv,
+      writable: true,
+      configurable: true,
+    });
   });
 
   beforeEach(() => {
