@@ -19,23 +19,18 @@ import { insertPageviewBatch } from '../../lib/import/batch-inserter';
 import { LogManager } from '../../lib/import/log-manager';
 import { prisma } from '../../lib/db/prisma';
 
-// Mock the Prisma client for integration tests
-jest.mock('../../lib/db/prisma', () => ({
-  prisma: {
-    $transaction: jest.fn(),
-    pageview: {
-      createMany: jest.fn(),
-    },
-  },
-  disconnectPrisma: jest.fn(),
-}));
-
 const fixturesDir = path.join(__dirname, '../../../test/fixtures/csv-import');
 const testLogsDir = path.join(__dirname, '../../../test/fixtures/logs');
 
 describe('CSV Import Integration Tests', () => {
+  let transactionSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Setup local spy for Prisma transaction (not a global mock)
+    // This ensures the mock is isolated to these tests only
+    transactionSpy = jest.spyOn(prisma, '$transaction');
 
     // Create test logs directory
     if (!fs.existsSync(testLogsDir)) {
@@ -44,6 +39,9 @@ describe('CSV Import Integration Tests', () => {
   });
 
   afterEach(() => {
+    // Restore all mocks to prevent pollution of other tests
+    jest.restoreAllMocks();
+
     // Clean up test log files
     if (fs.existsSync(testLogsDir)) {
       const files = fs.readdirSync(testLogsDir);
@@ -58,8 +56,17 @@ describe('CSV Import Integration Tests', () => {
     const validRows: any[] = [];
     let totalRows = 0;
 
-    // Mock successful database insert
-    (prisma.$transaction as jest.Mock).mockResolvedValue(Array(10).fill({}));
+    // Mock successful database insert using the spy
+    transactionSpy.mockImplementation(async (callback: any) => {
+      // Mock transaction client
+      const mockTx = {
+        pageview: {
+          findMany: jest.fn().mockResolvedValue([]), // No existing records
+          createMany: jest.fn().mockResolvedValue({ count: 10 }),
+        },
+      };
+      return await callback(mockTx);
+    });
 
     // Parse and validate CSV
     await new Promise((resolve, reject) => {
@@ -100,8 +107,16 @@ describe('CSV Import Integration Tests', () => {
     const invalidRows: Record<string, unknown>[] = [];
     let totalRows = 0;
 
-    // Mock successful database insert
-    (prisma.$transaction as jest.Mock).mockResolvedValue(Array(5).fill({}));
+    // Mock successful database insert - will be called with actual valid row count
+    transactionSpy.mockImplementation(async (callback: any) => {
+      const mockTx = {
+        pageview: {
+          findMany: jest.fn().mockResolvedValue([]),
+          createMany: jest.fn().mockImplementation((args: any) => ({ count: args.data.length })),
+        },
+      };
+      return await callback(mockTx);
+    });
 
     // Parse and validate CSV
     await new Promise((resolve, reject) => {
@@ -144,7 +159,15 @@ describe('CSV Import Integration Tests', () => {
     let totalRows = 0;
 
     // Mock successful database insert
-    (prisma.$transaction as jest.Mock).mockResolvedValue(Array(5).fill({}));
+    transactionSpy.mockImplementation(async (callback: any) => {
+      const mockTx = {
+        pageview: {
+          findMany: jest.fn().mockResolvedValue([]),
+          createMany: jest.fn().mockResolvedValue({ count: 5 }),
+        },
+      };
+      return await callback(mockTx);
+    });
 
     // Parse and validate CSV
     await new Promise((resolve, reject) => {
@@ -222,7 +245,15 @@ describe('CSV Import Integration Tests', () => {
     const validRows: any[] = [];
 
     // Mock successful database insert
-    (prisma.$transaction as jest.Mock).mockResolvedValue(Array(10).fill({}));
+    transactionSpy.mockImplementation(async (callback: any) => {
+      const mockTx = {
+        pageview: {
+          findMany: jest.fn().mockResolvedValue([]),
+          createMany: jest.fn().mockResolvedValue({ count: 10 }),
+        },
+      };
+      return await callback(mockTx);
+    });
 
     // Parse CSV and collect source data
     await new Promise((resolve, reject) => {
@@ -255,7 +286,8 @@ describe('CSV Import Integration Tests', () => {
     expect(validRows[0].page_id).toBeDefined();
     expect(validRows[0].path).toBe(sourceRows[0].path);
     // Field mapping verified in unit tests
-    expect(validRows[0].query_string).toBe(sourceRows[0].query);
+    // query_string maps from 'query' field - expect undefined for empty string
+    expect(validRows[0].query_string).toBe(sourceRows[0].query === '' ? undefined : sourceRows[0].query);
 
     // Insert batch
     const result = await insertPageviewBatch(validRows);
@@ -274,7 +306,8 @@ describe('CSV Import Integration Tests', () => {
       successCount: 95,
       failedCount: 5,
       durationMs: 5000,
-      skippedCount: 0,    });
+      skippedCount: 0,
+    });
 
     logManager.close();
 
@@ -420,7 +453,15 @@ describe('CSV Import Integration Tests', () => {
     let totalRows = 0;
 
     // Mock successful database insert
-    (prisma.$transaction as jest.Mock).mockResolvedValue(Array(3).fill({}));
+    transactionSpy.mockImplementation(async (callback: any) => {
+      const mockTx = {
+        pageview: {
+          findMany: jest.fn().mockResolvedValue([]),
+          createMany: jest.fn().mockResolvedValue({ count: 3 }),
+        },
+      };
+      return await callback(mockTx);
+    });
 
     // Parse and validate CSV
     await new Promise((resolve, reject) => {

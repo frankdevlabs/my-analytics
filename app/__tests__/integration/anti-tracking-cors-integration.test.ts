@@ -12,55 +12,14 @@ import { POST as AppendPOST, OPTIONS as AppendOPTIONS } from '@/app/api/metrics/
 import { POST as EventPOST, OPTIONS as EventOPTIONS } from '@/app/api/metrics/event/route';
 import { prisma } from 'lib/db/prisma';
 
-// Mock dependencies
-jest.mock('lib/db/prisma', () => ({
-  prisma: {
-    $transaction: jest.fn(),
-  },
-}));
-
-jest.mock('lib/config/cors', () => {
-  const actualCors = jest.requireActual('lib/config/cors');
-  return actualCors;
-});
-
-jest.mock('lib/parsing/user-agent-parser', () => ({
-  parseUserAgent: jest.fn(() => ({
-    browser_name: 'Chrome',
-    browser_version: '120.0.0',
-    os_name: 'Windows',
-    os_version: '10',
-  })),
-}));
-
-jest.mock('lib/parsing/extract-major-version', () => ({
-  extractMajorVersion: jest.fn(() => '120'),
-}));
-
-jest.mock('lib/geoip/maxmind-reader', () => ({
-  lookupCountryCode: jest.fn(async () => 'US'),
-}));
-
-jest.mock('lib/privacy/visitor-hash', () => ({
-  generateVisitorHash: jest.fn(() => 'test-hash'),
-}));
-
-jest.mock('lib/privacy/visitor-tracking', () => ({
-  checkAndRecordVisitor: jest.fn(async () => true),
-}));
-
-jest.mock('lib/session/session-storage', () => ({
-  getOrCreateSession: jest.fn(async () => null),
-  updateSession: jest.fn(async () => {}),
-}));
-
-jest.mock('lib/active-visitors/active-visitor-tracking', () => ({
-  recordVisitorActivity: jest.fn(async () => {}),
-}));
-
-jest.mock('isbot', () => ({
-  isbot: jest.fn(() => false),
-}));
+// Import modules that will be mocked locally (not globally)
+import * as uaParser from 'lib/parsing/user-agent-parser';
+import * as versionExtractor from 'lib/parsing/extract-major-version';
+import * as maxmindReader from 'lib/geoip/maxmind-reader';
+import * as visitorHash from 'lib/privacy/visitor-hash';
+import * as visitorTracking from 'lib/privacy/visitor-tracking';
+import * as sessionStorage from 'lib/session/session-storage';
+import * as activeVisitorTracking from 'lib/active-visitors/active-visitor-tracking';
 
 // Helper to create valid test payload
 function createValidPayload() {
@@ -98,6 +57,17 @@ function createValidPayload() {
 describe('CORS and CSP Integration for Anti-Tracking Endpoints', () => {
   const originalEnv = process.env.NODE_ENV;
 
+  // Local spy declarations (not global mocks)
+  let mockPrismaTransaction: jest.SpyInstance;
+  let mockParseUserAgent: jest.SpyInstance;
+  let mockExtractMajorVersion: jest.SpyInstance;
+  let mockLookupCountryCode: jest.SpyInstance;
+  let mockGenerateVisitorHash: jest.SpyInstance;
+  let mockCheckAndRecordVisitor: jest.SpyInstance;
+  let mockGetOrCreateSession: jest.SpyInstance;
+  let mockUpdateSession: jest.SpyInstance;
+  let mockRecordVisitorActivity: jest.SpyInstance;
+
   beforeAll(() => {
     process.env.NODE_ENV = 'development';
   });
@@ -108,6 +78,46 @@ describe('CORS and CSP Integration for Anti-Tracking Endpoints', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Set up local spies with default implementations
+    mockPrismaTransaction = jest.spyOn(prisma, '$transaction').mockResolvedValue(undefined);
+
+    mockParseUserAgent = jest.spyOn(uaParser, 'parseUserAgent').mockReturnValue({
+      browser: 'Chrome',
+      os: 'Windows',
+      device_type: 'desktop',
+    });
+
+    mockExtractMajorVersion = jest.spyOn(versionExtractor, 'extractMajorVersion').mockReturnValue('120');
+
+    mockLookupCountryCode = jest.spyOn(maxmindReader, 'lookupCountryCode').mockReturnValue('US');
+
+    mockGenerateVisitorHash = jest.spyOn(visitorHash, 'generateVisitorHash').mockReturnValue('test-hash-123');
+
+    mockCheckAndRecordVisitor = jest.spyOn(visitorTracking, 'checkAndRecordVisitor').mockResolvedValue(true);
+
+    mockGetOrCreateSession = jest.spyOn(sessionStorage, 'getOrCreateSession').mockResolvedValue({
+      start_time: new Date().toISOString(),
+      page_count: 1,
+      last_seen: new Date().toISOString(),
+      initial_referrer: null,
+      utm_params: {},
+    });
+
+    mockUpdateSession = jest.spyOn(sessionStorage, 'updateSession').mockResolvedValue({
+      start_time: new Date().toISOString(),
+      page_count: 2,
+      last_seen: new Date().toISOString(),
+      initial_referrer: null,
+      utm_params: {},
+    });
+
+    mockRecordVisitorActivity = jest.spyOn(activeVisitorTracking, 'recordVisitorActivity').mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    // Restore all mocks to prevent pollution of other tests
+    jest.restoreAllMocks();
   });
 
   describe('Cross-origin POST requests with CORS headers', () => {
@@ -124,7 +134,7 @@ describe('CORS and CSP Integration for Anti-Tracking Endpoints', () => {
         body: JSON.stringify(payload),
       });
 
-      (prisma.$transaction as jest.Mock).mockResolvedValue(undefined);
+      mockPrismaTransaction.mockResolvedValue(undefined);
 
       const response = await MetricsPOST(request);
 
@@ -179,7 +189,7 @@ describe('CORS and CSP Integration for Anti-Tracking Endpoints', () => {
         },
       });
 
-      (prisma.$transaction as jest.Mock).mockResolvedValue(undefined);
+      mockPrismaTransaction.mockResolvedValue(undefined);
 
       const response = await MetricsGET(request);
 
@@ -209,7 +219,7 @@ describe('CORS and CSP Integration for Anti-Tracking Endpoints', () => {
         body: JSON.stringify(payload),
       });
 
-      (prisma.$transaction as jest.Mock).mockResolvedValue(undefined);
+      mockPrismaTransaction.mockResolvedValue(undefined);
 
       const response = await MetricsPOST(request);
 
@@ -232,7 +242,7 @@ describe('CORS and CSP Integration for Anti-Tracking Endpoints', () => {
         body: JSON.stringify(payload),
       });
 
-      (prisma.$transaction as jest.Mock).mockResolvedValue(undefined);
+      mockPrismaTransaction.mockResolvedValue(undefined);
 
       const response = await AppendPOST(request);
 
@@ -258,7 +268,7 @@ describe('CORS and CSP Integration for Anti-Tracking Endpoints', () => {
         body: JSON.stringify(payload),
       });
 
-      (prisma.$transaction as jest.Mock).mockResolvedValue(undefined);
+      mockPrismaTransaction.mockResolvedValue(undefined);
 
       const response = await EventPOST(request);
 

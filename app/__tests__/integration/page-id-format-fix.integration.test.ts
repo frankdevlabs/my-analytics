@@ -12,44 +12,30 @@
  */
 
 import { NextRequest } from 'next/server';
-import { POST as trackPost } from '../../src/app/api/track/route';
-import { POST as appendPost } from '../../src/app/api/track/append/route';
-import { POST as eventPost } from '../../src/app/api/track/event/route';
+import { POST as trackPost } from '../../src/app/api/metrics/route';
+import { POST as appendPost } from '../../src/app/api/metrics/append/route';
+import { POST as eventPost } from '../../src/app/api/metrics/event/route';
 import { prisma } from '../../lib/db/prisma';
-import { checkAndRecordVisitor } from '../../lib/privacy/visitor-tracking';
-import { lookupCountryCode } from '../../lib/geoip/maxmind-reader';
 import { mapCsvRowToPageview } from '../../lib/import/field-mapper';
 import { validateCsvPageview } from '../../lib/import/validation-adapter';
 import { generatePageId } from '../../lib/import/field-mapper';
 
-// Mock dependencies
-jest.mock('../../lib/db/prisma', () => ({
-  prisma: {
-    $transaction: jest.fn(),
-    pageview: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      createMany: jest.fn(),
-    },
-    event: {
-      create: jest.fn(),
-    },
-  },
-}));
-
-jest.mock('../../lib/privacy/visitor-tracking');
-jest.mock('../../lib/geoip/maxmind-reader');
+// Import modules that will be mocked locally (not globally)
+import * as visitorTracking from '../../lib/privacy/visitor-tracking';
+import * as maxmindReader from '../../lib/geoip/maxmind-reader';
 
 describe('Page ID Format Fix - Integration Tests', () => {
+  let mockCheckAndRecordVisitor: jest.SpyInstance;
+  let mockLookupCountryCode: jest.SpyInstance;
+  let mockPrismaTransaction: jest.SpyInstance;
+
   beforeEach(() => {
-    jest.clearAllMocks();
-    // Setup default mocks
-    (checkAndRecordVisitor as jest.Mock).mockResolvedValue(true);
-    (lookupCountryCode as jest.Mock).mockReturnValue('US');
+    // Set up local mocks (not global - isolated to this test file)
+    mockCheckAndRecordVisitor = jest.spyOn(visitorTracking, 'checkAndRecordVisitor').mockResolvedValue(true);
+    mockLookupCountryCode = jest.spyOn(maxmindReader, 'lookupCountryCode').mockReturnValue('US');
 
     // Mock transaction for all endpoints
-    (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => {
+    mockPrismaTransaction = jest.spyOn(prisma, '$transaction').mockImplementation(async (callback) => {
       if (typeof callback === 'function') {
         const mockTx = {
           pageview: {
@@ -65,6 +51,11 @@ describe('Page ID Format Fix - Integration Tests', () => {
       }
       return {};
     });
+  });
+
+  afterEach(() => {
+    // Restore all mocks to prevent pollution of other tests
+    jest.restoreAllMocks();
   });
 
   const createMockRequest = (body: Record<string, unknown>, headers: Record<string, string> = {}) => {

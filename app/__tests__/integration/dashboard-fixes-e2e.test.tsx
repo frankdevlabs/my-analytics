@@ -14,10 +14,7 @@
 import { checkAndRecordVisitor } from '@/lib/privacy/visitor-tracking';
 import { lookupCountryCode } from '@/lib/geoip/maxmind-reader';
 import { getSeriesColor } from '@/config/chart-theme';
-import { getRedisClient } from '@/lib/redis';
-
-// Mock Redis client
-jest.mock('@/lib/redis');
+import * as redis from '@/lib/redis';
 
 const mockRedisClient = {
   get: jest.fn(),
@@ -25,9 +22,16 @@ const mockRedisClient = {
 };
 
 describe('Dashboard Fixes - End-to-End Integration', () => {
+  let mockGetRedisClient: jest.SpyInstance;
+
   beforeEach(() => {
-    jest.clearAllMocks();
-    (getRedisClient as jest.Mock).mockResolvedValue(mockRedisClient);
+    // Set up local mock (not global - isolated to this test file)
+    mockGetRedisClient = jest.spyOn(redis, 'getRedisClient').mockResolvedValue(mockRedisClient as any);
+  });
+
+  afterEach(() => {
+    // Restore all mocks to prevent pollution of other tests
+    jest.restoreAllMocks();
   });
 
   /**
@@ -38,7 +42,7 @@ describe('Dashboard Fixes - End-to-End Integration', () => {
   describe('Redis Error Handling', () => {
     it('should return true when Redis connection fails (graceful degradation)', async () => {
       const hash = 'test-visitor-hash-123';
-      (getRedisClient as jest.Mock).mockRejectedValue(
+      mockGetRedisClient.mockRejectedValue(
         new Error('Redis connection refused')
       );
 
@@ -50,7 +54,7 @@ describe('Dashboard Fixes - End-to-End Integration', () => {
 
     it('should return true when Redis times out', async () => {
       const hash = 'test-visitor-hash-456';
-      (getRedisClient as jest.Mock).mockRejectedValue(
+      mockGetRedisClient.mockRejectedValue(
         new Error('Redis operation timed out')
       );
 

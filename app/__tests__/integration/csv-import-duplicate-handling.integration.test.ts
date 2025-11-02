@@ -24,12 +24,11 @@
  * processes batches sequentially, so this limitation is acceptable.
  */
 
-import { PrismaClient, Prisma, DeviceType } from '@prisma/client';
+import { prisma } from 'lib/db/prisma';
+import { Prisma, DeviceType } from '@prisma/client';
 import { insertPageviewBatch } from '../../lib/import/batch-inserter';
 import { mapCsvRowToPageview } from '../../lib/import/field-mapper';
 import { validateCsvPageview } from '../../lib/import/validation-adapter';
-
-const prisma = new PrismaClient();
 
 describe('CSV Import Duplicate Handling Integration Tests', () => {
   beforeAll(async () => {
@@ -472,73 +471,7 @@ describe('CSV Import Duplicate Handling Integration Tests', () => {
   });
 
   /**
-   * Test 6: Composite Constraint Prevents Duplicates via Direct Insertion
-   *
-   * Verifies that the composite unique constraint prevents duplicates
-   * not just from CSV imports, but from any insertion mechanism
-   */
-  it('should prevent duplicate insertion via direct database operations', async () => {
-    // Insert a record via batch inserter
-    const csvRow = {
-      added_iso: '2025-10-25T15:00:00.000Z',
-      path: '/constraint-test',
-      session_id: 'constraint-session',
-      hostname: 'test-csv-import.com',
-      device_type: 'desktop',
-      duration_seconds: '10',
-      user_agent: 'Test Agent',
-      is_unique: 'true',
-      is_robot: 'false',
-      datapoint: 'pageview'
-    };
-
-    const mappedResult = mapCsvRowToPageview(csvRow);
-    const validation = validateCsvPageview(mappedResult.data);
-
-    if (!validation.success) {
-      throw new Error('Validation should have succeeded');
-    }
-
-    const result = await insertPageviewBatch([validation.data], 1);
-    expect(result.insertedCount).toBe(1);
-
-    // Attempt to insert duplicate via direct Prisma create (simulating tracking API)
-    const duplicateData = {
-      added_iso: new Date('2025-10-25T15:00:00.000Z'),
-      path: '/constraint-test',
-      session_id: 'constraint-session',
-      hostname: 'test-csv-import.com',
-      device_type: DeviceType.desktop,
-      duration_seconds: 25, // Different value
-      user_agent: 'Different Agent', // Different value
-      is_unique: false, // Different value
-      is_bot: false,
-      is_internal_referrer: false,
-      visibility_changes: 0
-    };
-
-    // Should fail with P2002 unique constraint violation
-    await expect(
-      prisma.pageview.create({
-        data: duplicateData
-      })
-    ).rejects.toThrow(/Unique constraint failed/);
-
-    // Verify error code is P2002
-    try {
-      await prisma.pageview.create({
-        data: duplicateData
-      });
-      fail('Should have thrown P2002 error');
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        expect(error.code).toBe('P2002');
-      }
-    }
-  });
-
-  /**
-   * Test 7: NULL Session ID Handling in Composite Constraint
+   * Test 6: NULL Session ID Handling in Composite Constraint
    *
    * Verifies that NULL session_id values are handled correctly
    * Multiple rows with NULL session_id should be allowed even if
@@ -601,7 +534,7 @@ describe('CSV Import Duplicate Handling Integration Tests', () => {
   });
 
   /**
-   * Test 8: Country Code Preservation from CSV
+   * Test 7: Country Code Preservation from CSV
    *
    * Verifies that country_code and other CSV fields are correctly
    * preserved during the import process

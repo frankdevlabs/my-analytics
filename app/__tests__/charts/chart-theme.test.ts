@@ -19,14 +19,14 @@ describe('Chart Theme Configuration', () => {
       expect(chartColors.light.primary).toBe('#09192B');
       expect(chartColors.light.accent).toBe('#D9BF65');
       expect(chartColors.light.tooltipBg).toBe('#F5F2EB');
-      expect(chartColors.light.series).toHaveLength(7);
+      expect(chartColors.light.series).toHaveLength(8);
     });
 
     it('dark mode colors are defined correctly', () => {
       expect(chartColors.dark.primary).toBe('#FEFBF4');
       expect(chartColors.dark.accent).toBe('#D9BF65');
       expect(chartColors.dark.tooltipBg).toBe('#0F1F35');
-      expect(chartColors.dark.series).toHaveLength(7);
+      expect(chartColors.dark.series).toHaveLength(8);
     });
 
     it('accent color is consistent across modes', () => {
@@ -35,10 +35,11 @@ describe('Chart Theme Configuration', () => {
     });
 
     it('multi-series colors include both primary and accent', () => {
-      expect(chartColors.light.series[0]).toBe('#09192B');
-      expect(chartColors.light.series[1]).toBe('#D9BF65');
-      expect(chartColors.dark.series[0]).toBe('#FEFBF4');
-      expect(chartColors.dark.series[1]).toBe('#D9BF65');
+      // Series array now starts with accent color for better accessibility
+      expect(chartColors.light.series[0]).toBe('#D9BF65');
+      expect(chartColors.light.series[7]).toBe('#09192B');
+      expect(chartColors.dark.series[0]).toBe('#D9BF65');
+      expect(chartColors.dark.series[7]).toBe('#FEFBF4');
     });
   });
 
@@ -124,23 +125,23 @@ describe('Chart Theme Configuration', () => {
   describe('getSeriesColor', () => {
     it('returns correct color for first series in light mode', () => {
       const color = getSeriesColor(0, false);
-      expect(color).toBe('#09192B');
+      expect(color).toBe('#D9BF65'); // First color is now accent for accessibility
     });
 
     it('returns correct color for second series in light mode', () => {
       const color = getSeriesColor(1, false);
-      expect(color).toBe('#D9BF65');
+      expect(color).toBe('#3B82F6'); // Second color is blue
     });
 
     it('returns correct color for first series in dark mode', () => {
       const color = getSeriesColor(0, true);
-      expect(color).toBe('#FEFBF4');
+      expect(color).toBe('#D9BF65'); // First color is now accent for accessibility
     });
 
     it('wraps around for indices beyond series length', () => {
-      const color7 = getSeriesColor(7, false);
+      const color8 = getSeriesColor(8, false);
       const color0 = getSeriesColor(0, false);
-      expect(color7).toBe(color0);
+      expect(color8).toBe(color0); // Now wraps at 8 instead of 7
     });
   });
 });

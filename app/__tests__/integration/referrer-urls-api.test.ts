@@ -5,18 +5,19 @@
 
 import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/referrer-urls/route';
-import { getReferrerUrlsByDomain } from 'lib/db/pageviews';
-
-// Mock the database layer
-jest.mock('lib/db/pageviews');
-
-const mockGetReferrerUrlsByDomain = getReferrerUrlsByDomain as jest.MockedFunction<
-  typeof getReferrerUrlsByDomain
->;
+import * as pageviewsDb from 'lib/db/pageviews';
 
 describe('Integration: GET /api/referrer-urls', () => {
+  let mockGetReferrerUrlsByDomain: jest.SpyInstance;
+
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Set up local mocks (not global - isolated to this test file)
+    mockGetReferrerUrlsByDomain = jest.spyOn(pageviewsDb, 'getReferrerUrlsByDomain');
+  });
+
+  afterEach(() => {
+    // Restore all mocks to prevent pollution of other tests
+    jest.restoreAllMocks();
   });
 
   describe('E2E: Fetch referrer URLs by domain through API', () => {
@@ -70,10 +71,14 @@ describe('Integration: GET /api/referrer-urls', () => {
 
       await GET(request);
 
+      // API sets end date to end of day (23:59:59.999) to include all data for that day
+      const expectedEndDate = new Date('2025-10-20');
+      expectedEndDate.setUTCHours(23, 59, 59, 999);
+
       expect(mockGetReferrerUrlsByDomain).toHaveBeenCalledWith(
         'example.com',
         new Date('2025-10-15'),
-        new Date('2025-10-20'),
+        expectedEndDate,
         100
       );
     });
@@ -88,10 +93,15 @@ describe('Integration: GET /api/referrer-urls', () => {
       const response = await GET(request);
 
       expect(response.status).toBe(200);
+
+      // API sets end date to end of day (23:59:59.999) to include all data for that day
+      const expectedEndDate = new Date('2025-10-15');
+      expectedEndDate.setUTCHours(23, 59, 59, 999);
+
       expect(mockGetReferrerUrlsByDomain).toHaveBeenCalledWith(
         'example.com',
         new Date('2025-10-15'),
-        new Date('2025-10-15'),
+        expectedEndDate,
         100
       );
     });

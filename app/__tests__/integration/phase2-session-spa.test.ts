@@ -15,13 +15,8 @@
  */
 
 import { getOrCreateSession, updateSession, SessionMetadata } from '../../lib/session/session-storage';
-import { getRedisClient } from '../../lib/redis';
+import * as redis from '../../lib/redis';
 import { RedisClientType } from 'redis';
-
-// Mock Redis client
-jest.mock('../../lib/redis');
-
-const mockGetRedisClient = getRedisClient as jest.MockedFunction<typeof getRedisClient>;
 
 interface MockRedisClient {
   get: jest.Mock;
@@ -31,11 +26,9 @@ interface MockRedisClient {
 
 describe('Phase 2 Integration Tests: Session Tracking + SPA Navigation', () => {
   let mockRedis: MockRedisClient;
+  let mockGetRedisClient: jest.SpyInstance;
 
   beforeEach(() => {
-    // Reset all mocks before each test
-    jest.clearAllMocks();
-
     // Create mock Redis client
     mockRedis = {
       get: jest.fn(),
@@ -43,8 +36,13 @@ describe('Phase 2 Integration Tests: Session Tracking + SPA Navigation', () => {
       disconnect: jest.fn(),
     };
 
-    // Cast to RedisClientType to satisfy type requirements
-    mockGetRedisClient.mockResolvedValue(mockRedis as unknown as RedisClientType);
+    // Set up local mock (not global - isolated to this test file)
+    mockGetRedisClient = jest.spyOn(redis, 'getRedisClient').mockResolvedValue(mockRedis as unknown as RedisClientType);
+  });
+
+  afterEach(() => {
+    // Restore all mocks to prevent pollution of other tests
+    jest.restoreAllMocks();
   });
 
   describe('Session Persistence E2E', () => {

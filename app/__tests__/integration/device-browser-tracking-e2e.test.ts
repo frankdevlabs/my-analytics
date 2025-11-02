@@ -4,90 +4,82 @@
  * Tests the complete flow from user agent tracking through storage,
  * query, and analytics display for device and browser data.
  *
- * Task Group 5: Test Review & Gap Analysis - E2E Tests
+ * Note: The test database is automatically set up by Jest's globalSetup.
+ * You can run these tests with just `npm test` or `npm run test:e2e`.
  *
- * NOTE: This E2E test requires a real database connection and creates test data.
- * It is commented out by default to avoid database schema issues during test runs.
- * To enable, ensure all Prisma schema migrations are up to date.
+ * This test suite validates:
+ * - Device type tracking and breakdown calculations
+ * - Browser parsing and analytics
+ * - Unknown browser handling
+ * - "Other" category grouping for browser breakdown
+ *
+ * Task Group 5: Test Review & Gap Analysis - E2E Tests
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from 'lib/db/prisma';
 import { extractMajorVersion } from '@/lib/parsing/extract-major-version';
 import { parseUserAgent } from '@/lib/parsing/user-agent-parser';
 import {
   getDeviceTypeBreakdown,
   getBrowserBreakdown,
 } from '@/lib/db/pageviews';
+import {
+  createTestPageview,
+  cleanupTestPageviews,
+  disconnectTestDb,
+  expectDeviceCount,
+  expectBrowserInResults,
+  expectTotalPercentage,
+  expectTotalCount,
+} from '../helpers/e2e-test-utils';
 
-const prisma = new PrismaClient();
-
-// Skip these tests by default as they require full database setup
-describe.skip('Device and Browser Analytics E2E Flow', () => {
+describe('Device and Browser Analytics E2E Flow', () => {
   // Clean up test data after tests
   afterAll(async () => {
-    await prisma.pageview.deleteMany({
-      where: {
-        path: {
-          startsWith: '/test-device-browser-',
-        },
-      },
-    });
-
-    await prisma.$disconnect();
+    await cleanupTestPageviews(prisma, '/test-device-browser-');
+    await disconnectTestDb(prisma);
   });
 
   it('should track, store, and query device/browser data end-to-end', async () => {
-    // Step 1: Simulate tracking various user agents
+    const testDate = new Date('2025-10-15T12:00:00Z');
+
+    // Step 1 & 2: Define test user agents and parse them
     const testUserAgents = [
       {
         ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        expectedDevice: 'desktop',
-        expectedBrowser: 'Chrome',
-        expectedMajorVersion: '120',
+        device: 'desktop' as const,
       },
       {
         ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-        expectedDevice: 'mobile',
-        expectedBrowser: 'Mobile Safari',
-        expectedMajorVersion: '17',
+        device: 'mobile' as const,
       },
       {
         ua: 'Mozilla/5.0 (iPad; CPU OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
-        expectedDevice: 'tablet',
-        expectedBrowser: 'Mobile Safari',
-        expectedMajorVersion: '16',
+        device: 'tablet' as const,
       },
       {
         ua: 'Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0',
-        expectedDevice: 'desktop',
-        expectedBrowser: 'Firefox',
-        expectedMajorVersion: '121',
+        device: 'desktop' as const,
       },
     ];
 
-    const testDate = new Date('2025-10-15T12:00:00Z');
-
-    // Step 2: Parse user agents and store in database
+    // Create test pageviews using factory function
     for (let i = 0; i < testUserAgents.length; i++) {
-      const { ua, expectedDevice } = testUserAgents[i];
+      const { ua, device } = testUserAgents[i];
       const parsedUA = parseUserAgent(ua);
       const browserMajorVersion = extractMajorVersion(parsedUA.browser_version);
 
-      await prisma.pageview.create({
-        data: {
-          path: `/test-device-browser-${i}`,
-          added_iso: testDate,
-          device_type: expectedDevice as 'desktop' | 'mobile' | 'tablet',
-          browser_name: parsedUA.browser_name,
-          browser_version: parsedUA.browser_version,
-          browser_major_version: browserMajorVersion,
-          user_agent: ua,
-          duration_seconds: 30,
-          is_bot: false,
-          is_internal_referrer: false,
-          visibility_changes: 0,
-        },
+      const pageview = createTestPageview({
+        path: `/test-device-browser-${i}`,
+        added_iso: testDate,
+        device_type: device,
+        browser_name: parsedUA.browser_name,
+        browser_version: parsedUA.browser_version,
+        browser_major_version: browserMajorVersion,
+        user_agent: ua,
       });
+
+      await prisma.pageview.create({ data: pageview as any });
     }
 
     // Step 3: Query device type breakdown
@@ -96,71 +88,47 @@ describe.skip('Device and Browser Analytics E2E Flow', () => {
 
     const deviceBreakdown = await getDeviceTypeBreakdown(startDate, endDate);
 
-    // Verify device type breakdown
+    // Verify device type breakdown using custom matchers
     expect(deviceBreakdown.length).toBeGreaterThan(0);
-
-    const desktopData = deviceBreakdown.find((d) => d.device_type === 'Desktop');
-    const mobileData = deviceBreakdown.find((d) => d.device_type === 'Mobile');
-    const tabletData = deviceBreakdown.find((d) => d.device_type === 'Tablet');
-
-    expect(desktopData).toBeDefined();
-    expect(desktopData!.count).toBe(2); // Chrome and Firefox
-    expect(mobileData).toBeDefined();
-    expect(mobileData!.count).toBe(1); // iPhone
-    expect(tabletData).toBeDefined();
-    expect(tabletData!.count).toBe(1); // iPad
+    expectDeviceCount(deviceBreakdown, 'Desktop', 2); // Chrome and Firefox
+    expectDeviceCount(deviceBreakdown, 'Mobile', 1); // iPhone
+    expectDeviceCount(deviceBreakdown, 'Tablet', 1); // iPad
 
     // Verify percentages sum to 100
-    const totalPercentage = deviceBreakdown.reduce(
-      (sum, d) => sum + d.percentage,
-      0
-    );
-    expect(Math.abs(totalPercentage - 100)).toBeLessThan(0.01);
+    expectTotalPercentage(deviceBreakdown);
 
     // Step 4: Query browser breakdown
     const browserBreakdown = await getBrowserBreakdown(startDate, endDate, 5);
 
-    // Verify browser breakdown
+    // Verify browser breakdown using custom matchers
     expect(browserBreakdown.length).toBeGreaterThan(0);
 
-    // Find Chrome 120
-    const chromeData = browserBreakdown.find((b) =>
-      b.browser.includes('Chrome')
-    );
-    expect(chromeData).toBeDefined();
+    // Verify specific browsers appear in results
+    expectBrowserInResults(browserBreakdown, 'Chrome');
+    expectBrowserInResults(browserBreakdown, 'Firefox');
 
-    // Find Mobile Safari entries
+    // Find Mobile Safari entries (2 devices: iPhone and iPad)
     const safariEntries = browserBreakdown.filter((b) =>
       b.browser.includes('Safari')
     );
     expect(safariEntries.length).toBeGreaterThan(0);
-
-    // Find Firefox 121
-    const firefoxData = browserBreakdown.find((b) =>
-      b.browser.includes('Firefox')
-    );
-    expect(firefoxData).toBeDefined();
   });
 
   it('should handle Unknown browser gracefully in analytics', async () => {
     const testDate = new Date('2025-10-20T12:00:00Z');
 
-    // Create pageview with null browser data (simulating unparseable UA)
-    await prisma.pageview.create({
-      data: {
-        path: '/test-device-browser-unknown',
-        added_iso: testDate,
-        device_type: 'desktop',
-        browser_name: null,
-        browser_version: null,
-        browser_major_version: null,
-        user_agent: 'Unknown/Malformed User Agent',
-        duration_seconds: 30,
-        is_bot: false,
-        is_internal_referrer: false,
-        visibility_changes: 0,
-      },
+    // Create pageview with null browser data (simulating unparseable UA) using factory
+    const pageview = createTestPageview({
+      path: '/test-device-browser-unknown',
+      added_iso: testDate,
+      device_type: 'desktop',
+      browser_name: null,
+      browser_version: null,
+      browser_major_version: null,
+      user_agent: 'Unknown/Malformed User Agent',
     });
+
+    await prisma.pageview.create({ data: pageview as any });
 
     // Query browser breakdown
     const startDate = new Date('2025-10-20T00:00:00Z');
@@ -168,16 +136,15 @@ describe.skip('Device and Browser Analytics E2E Flow', () => {
 
     const browserBreakdown = await getBrowserBreakdown(startDate, endDate, 5);
 
-    // Verify Unknown category exists
-    const unknownData = browserBreakdown.find((b) => b.browser === 'Unknown');
-    expect(unknownData).toBeDefined();
-    expect(unknownData!.count).toBeGreaterThan(0);
+    // Verify Unknown category exists using custom matcher
+    const unknownData = expectBrowserInResults(browserBreakdown, 'Unknown');
+    expect(unknownData.count).toBeGreaterThan(0);
   });
 
   it('should correctly calculate "Other" category for browsers', async () => {
     const testDate = new Date('2025-10-25T12:00:00Z');
 
-    // Create 7 different browsers (more than top 5 limit)
+    // Create 7 different browsers (more than top 5 limit) using factory
     const browsers = [
       { name: 'Chrome', version: '120' },
       { name: 'Safari', version: '17' },
@@ -190,21 +157,17 @@ describe.skip('Device and Browser Analytics E2E Flow', () => {
 
     for (let i = 0; i < browsers.length; i++) {
       const browser = browsers[i];
-      await prisma.pageview.create({
-        data: {
-          path: `/test-device-browser-other-${i}`,
-          added_iso: testDate,
-          device_type: 'desktop',
-          browser_name: browser.name,
-          browser_version: `${browser.version}.0`,
-          browser_major_version: browser.version,
-          user_agent: `${browser.name}/${browser.version}.0`,
-          duration_seconds: 30,
-          is_bot: false,
-          is_internal_referrer: false,
-          visibility_changes: 0,
-        },
+      const pageview = createTestPageview({
+        path: `/test-device-browser-other-${i}`,
+        added_iso: testDate,
+        device_type: 'desktop',
+        browser_name: browser.name,
+        browser_version: `${browser.version}.0`,
+        browser_major_version: browser.version,
+        user_agent: `${browser.name}/${browser.version}.0`,
       });
+
+      await prisma.pageview.create({ data: pageview as any });
     }
 
     // Query browser breakdown with limit of 5
@@ -213,14 +176,12 @@ describe.skip('Device and Browser Analytics E2E Flow', () => {
 
     const browserBreakdown = await getBrowserBreakdown(startDate, endDate, 5);
 
-    // Verify "Other" category is present
-    const otherData = browserBreakdown.find((b) => b.browser === 'Other');
-    expect(otherData).toBeDefined();
-    expect(otherData!.count).toBe(2); // Brave and Vivaldi should be in "Other"
+    // Verify "Other" category is present using custom matcher
+    const otherData = expectBrowserInResults(browserBreakdown, 'Other');
+    expect(otherData.count).toBe(2); // Brave and Vivaldi should be in "Other"
 
-    // Verify total count matches
-    const totalCount = browserBreakdown.reduce((sum, b) => sum + b.count, 0);
-    expect(totalCount).toBe(7);
+    // Verify total count matches using custom matcher
+    expectTotalCount(browserBreakdown, 7);
   });
 });
 

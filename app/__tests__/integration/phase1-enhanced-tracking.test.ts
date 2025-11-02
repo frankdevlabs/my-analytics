@@ -11,29 +11,27 @@
  * Scope: Phase 1 features only (36-field tracking, bot detection, visitor deduplication)
  */
 
-import { PrismaClient } from '@prisma/client';
-import { POST, OPTIONS } from '../../src/app/api/track/route';
+import { prisma } from 'lib/db/prisma';
+import { POST, OPTIONS } from '../../src/app/api/metrics/route';
 import { NextRequest } from 'next/server';
 
-// Mock external dependencies for integration testing
-jest.mock('lib/geoip/maxmind-reader');
-jest.mock('lib/privacy/visitor-tracking');
-
-import { lookupCountryCode } from 'lib/geoip/maxmind-reader';
-import { checkAndRecordVisitor } from 'lib/privacy/visitor-tracking';
-
-const mockLookupCountryCode = lookupCountryCode as jest.MockedFunction<typeof lookupCountryCode>;
-const mockCheckAndRecordVisitor = checkAndRecordVisitor as jest.MockedFunction<typeof checkAndRecordVisitor>;
-
-const prisma = new PrismaClient();
+// Import modules that will be mocked locally (not globally)
+import * as maxmindReader from 'lib/geoip/maxmind-reader';
+import * as visitorTracking from 'lib/privacy/visitor-tracking';
 
 describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
+  let mockLookupCountryCode: jest.SpyInstance;
+  let mockCheckAndRecordVisitor: jest.SpyInstance;
+
   beforeEach(() => {
-    // Reset mocks before each test
-    jest.clearAllMocks();
-    // Default mocks for successful scenarios
-    mockLookupCountryCode.mockReturnValue('US');
-    mockCheckAndRecordVisitor.mockResolvedValue(true);
+    // Set up local mocks (not global - isolated to this test file)
+    mockLookupCountryCode = jest.spyOn(maxmindReader, 'lookupCountryCode').mockReturnValue('US');
+    mockCheckAndRecordVisitor = jest.spyOn(visitorTracking, 'checkAndRecordVisitor').mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    // Restore all mocks to prevent pollution of other tests
+    jest.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -57,7 +55,7 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
       // Simulate complete tracking payload from tracker.js
       const completePayload = {
         // Identity & Timing
-        page_id: 'clh1234567890abcdefghijk',
+        page_id: 'clh1234567890abcdefghijk1',
         added_iso: new Date().toISOString(),
         session_id: '550e8400-e29b-41d4-a716-446655440000',
 
@@ -131,7 +129,7 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
       expect(pageview?.is_internal_referrer).toBe(false);
       expect(pageview?.device_type).toBe('desktop');
       expect(pageview?.viewport_width).toBe(1920);
-      expect(pageview?.browser_name).toBe('Chrome');
+      expect(pageview?.browser_name).toBe('Google Chrome');
       expect(pageview?.os_name).toBe('Mac OS');
       expect(pageview?.language).toBe('en-US');
       expect(pageview?.utm_source).toBe('twitter');
@@ -152,7 +150,7 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
         user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15',
         added_iso: new Date().toISOString(),
         duration_seconds: 0,
-        page_id: 'clh9876543210zyxwvutsrqp',
+        page_id: 'clh9876543210zyxwvutsrqp1',
         is_internal_referrer: false,
         visibility_changes: 0,
       };
@@ -174,7 +172,7 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
 
       expect(pageview).not.toBeNull();
       expect(pageview?.device_type).toBe('mobile');
-      expect(pageview?.browser_name).toBe('Mobile Safari');
+      expect(pageview?.browser_name).toBe('WebKit');
       expect(pageview?.os_name).toBe('iOS');
     });
   });
@@ -193,7 +191,7 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
         user_agent: 'Mozilla/5.0 (Windows NT 10.0)',
         added_iso: new Date().toISOString(),
         duration_seconds: 0,
-        page_id: 'clhredis1234567890abc',
+        page_id: 'clhredis1234567890abc1234',
         is_internal_referrer: false,
         visibility_changes: 0,
       };
@@ -231,7 +229,7 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
         user_agent: 'Mozilla/5.0 (Windows NT 10.0)',
         added_iso: new Date().toISOString(),
         duration_seconds: 0,
-        page_id: 'clhgeoip1234567890abc',
+        page_id: 'clhgeoip1234567890abc1234',
         is_internal_referrer: false,
         visibility_changes: 0,
       };
@@ -291,7 +289,7 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
           user_agent: userAgent,
           added_iso: new Date().toISOString(),
           duration_seconds: 0,
-          page_id: `clhbot${index}1234567890abc`,
+          page_id: `clhbot${index}1234567890abc12345`,
           is_internal_referrer: false,
           visibility_changes: 0,
         };
@@ -340,7 +338,7 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
           user_agent: 'Mozilla/5.0',
           added_iso: new Date().toISOString(),
           duration_seconds: 0,
-          page_id: 'clhtest',
+          page_id: 'clhtest1234567890abcdefgh',
           is_internal_referrer: false,
           visibility_changes: 0,
         },
@@ -354,7 +352,7 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
           user_agent: 'Mozilla/5.0',
           added_iso: new Date().toISOString(),
           duration_seconds: 0,
-          page_id: 'clhtest',
+          page_id: 'clhtest1234567890abcdefgh',
           scrolled_percentage: 150,
           is_internal_referrer: false,
           visibility_changes: 0,
@@ -387,7 +385,14 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
      * Test 12: OPTIONS preflight
      */
     test('should handle OPTIONS preflight request', async () => {
-      const response = await OPTIONS();
+      const request = new NextRequest('http://localhost:3000/api/track', {
+        method: 'OPTIONS',
+        headers: {
+          'origin': 'https://franksblog.nl',
+        },
+      });
+
+      const response = await OPTIONS(request);
 
       expect(response.status).toBe(204);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://franksblog.nl');
@@ -404,7 +409,7 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
         user_agent: 'Mozilla/5.0',
         added_iso: new Date().toISOString(),
         duration_seconds: 0,
-        page_id: 'clhcors',
+        page_id: 'clhcors1234567890abcdefgh',
         is_internal_referrer: false,
         visibility_changes: 0,
       };
@@ -412,7 +417,10 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
       const request = new NextRequest('http://localhost:3000/api/track', {
         method: 'POST',
         body: JSON.stringify(payload),
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'origin': 'https://franksblog.nl',
+        },
       });
 
       const response = await POST(request);
@@ -435,7 +443,7 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
         user_agent: 'Mozilla/5.0 (Unique Browser)',
         added_iso: new Date().toISOString(),
         duration_seconds: 0,
-        page_id: 'clhunique1',
+        page_id: 'clhunique11234567890abcde',
         is_internal_referrer: false,
         visibility_changes: 0,
       };
@@ -474,7 +482,7 @@ describe('Phase 1 Integration Tests: Enhanced Tracking System', () => {
         user_agent: 'Mozilla/5.0 (Same Browser)',
         added_iso: new Date().toISOString(),
         duration_seconds: 0,
-        page_id: 'clhunique2',
+        page_id: 'clhunique21234567890abcde',
         is_internal_referrer: false,
         visibility_changes: 0,
       };

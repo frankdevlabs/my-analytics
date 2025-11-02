@@ -17,19 +17,19 @@ import {
 import { prisma } from 'lib/db/prisma';
 import { extractDomainFromUrl, getCategoryFromDomain } from 'lib/config/referrer-categories';
 
-// Mock the Prisma client
-jest.mock('lib/db/prisma', () => ({
-  prisma: {
-    $queryRaw: jest.fn(),
-    pageview: {
-      groupBy: jest.fn(),
-    },
-  },
-}));
-
 describe('Referrer Sources Integration Tests', () => {
+  let mockQueryRaw: jest.SpyInstance;
+  let mockGroupBy: jest.SpyInstance;
+
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Set up local mocks (not global - isolated to this test file)
+    mockQueryRaw = jest.spyOn(prisma, '$queryRaw' as any);
+    mockGroupBy = jest.spyOn(prisma.pageview, 'groupBy');
+  });
+
+  afterEach(() => {
+    // Restore all mocks to prevent pollution of other tests
+    jest.restoreAllMocks();
   });
 
   describe('Integration Test: Full Dashboard to Modal Workflow', () => {
@@ -41,7 +41,7 @@ describe('Referrer Sources Integration Tests', () => {
         { referrer_category: 'Social', pageviews: BigInt(300) },
         { referrer_category: 'External', pageviews: BigInt(200) },
       ];
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce(mockCategoryData);
+      mockQueryRaw.mockResolvedValueOnce(mockCategoryData);
 
       const startDate = new Date('2025-10-01');
       const endDate = new Date('2025-10-31');
@@ -61,7 +61,7 @@ describe('Referrer Sources Integration Tests', () => {
         { referrer_domain: 'facebook.com', referrer_category: 'Social', pageviews: BigInt(250) },
         { referrer_domain: 'example.com', referrer_category: 'External', pageviews: BigInt(150) },
       ];
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce(mockDomainData);
+      mockQueryRaw.mockResolvedValueOnce(mockDomainData);
 
       const domains = await getReferrersByDomain(startDate, endDate, 50);
 
@@ -77,7 +77,7 @@ describe('Referrer Sources Integration Tests', () => {
         { document_referrer: 'https://google.com/search?q=tracking', pageviews: BigInt(150) },
         { document_referrer: 'https://google.com/', pageviews: BigInt(50) },
       ];
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce(mockUrlData);
+      mockQueryRaw.mockResolvedValueOnce(mockUrlData);
 
       const urls = await getReferrerUrlsByDomain('google.com', startDate, endDate, 100);
 
@@ -88,7 +88,7 @@ describe('Referrer Sources Integration Tests', () => {
       ]);
 
       // Verify all three queries were called with correct parameters
-      expect(prisma.$queryRaw).toHaveBeenCalledTimes(3);
+      expect(mockQueryRaw).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -104,7 +104,7 @@ describe('Referrer Sources Integration Tests', () => {
         { referrer_category: 'Search', pageviews: BigInt(500) },
         { referrer_category: 'Direct', pageviews: BigInt(300) },
       ];
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce(mockOctoberData);
+      mockQueryRaw.mockResolvedValueOnce(mockOctoberData);
 
       const octoberResults = await getReferrersByCategory(october.start, october.end);
 
@@ -122,7 +122,7 @@ describe('Referrer Sources Integration Tests', () => {
         { referrer_category: 'Social', pageviews: BigInt(400) },
         { referrer_category: 'Direct', pageviews: BigInt(200) },
       ];
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce(mockNovemberData);
+      mockQueryRaw.mockResolvedValueOnce(mockNovemberData);
 
       const novemberResults = await getReferrersByCategory(november.start, november.end);
 
@@ -130,9 +130,9 @@ describe('Referrer Sources Integration Tests', () => {
       expect(novemberResults[0].pageviews).toBe(800);
 
       // Verify both queries used correct date parameters
-      expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
-      const firstCall = (prisma.$queryRaw as jest.Mock).mock.calls[0];
-      const secondCall = (prisma.$queryRaw as jest.Mock).mock.calls[1];
+      expect(mockQueryRaw).toHaveBeenCalledTimes(2);
+      const firstCall = mockQueryRaw.mock.calls[0];
+      const secondCall = mockQueryRaw.mock.calls[1];
 
       expect(firstCall).toContain(october.start);
       expect(firstCall).toContain(october.end);
@@ -146,7 +146,7 @@ describe('Referrer Sources Integration Tests', () => {
       const mockAllDirectData = [
         { referrer_category: 'Direct', pageviews: BigInt(2000) },
       ];
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce(mockAllDirectData);
+      mockQueryRaw.mockResolvedValueOnce(mockAllDirectData);
 
       const startDate = new Date('2025-10-01');
       const endDate = new Date('2025-10-31');
@@ -163,7 +163,7 @@ describe('Referrer Sources Integration Tests', () => {
     it('should return empty array for domains when all traffic is direct', async () => {
       // When all referrers are null, getReferrersByDomain should return no domains
       // because the query filters WHERE referrer_domain IS NOT NULL
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce([]);
+      mockQueryRaw.mockResolvedValueOnce([]);
 
       const startDate = new Date('2025-10-01');
       const endDate = new Date('2025-10-31');
@@ -304,7 +304,7 @@ describe('Referrer Sources Integration Tests', () => {
 
       // Mock should only return 100 results due to LIMIT clause
       const mockLimitedResults = mockManyUrls.slice(0, 100);
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce(mockLimitedResults);
+      mockQueryRaw.mockResolvedValueOnce(mockLimitedResults);
 
       const startDate = new Date('2025-10-01');
       const endDate = new Date('2025-10-31');
@@ -318,7 +318,7 @@ describe('Referrer Sources Integration Tests', () => {
       expect(results[99].url).toBe('https://google.com/search?q=query100');
 
       // Verify limit was passed to query
-      const queryCall = (prisma.$queryRaw as jest.Mock).mock.calls[0];
+      const queryCall = mockQueryRaw.mock.calls[0];
       expect(queryCall).toContain(limit);
     });
 
@@ -328,7 +328,7 @@ describe('Referrer Sources Integration Tests', () => {
         pageviews: BigInt(50 - i),
       }));
 
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce(mockResults);
+      mockQueryRaw.mockResolvedValueOnce(mockResults);
 
       const startDate = new Date('2025-10-01');
       const endDate = new Date('2025-10-31');
@@ -339,14 +339,14 @@ describe('Referrer Sources Integration Tests', () => {
       expect(results).toHaveLength(25);
 
       // Verify custom limit was used
-      const queryCall = (prisma.$queryRaw as jest.Mock).mock.calls[0];
+      const queryCall = mockQueryRaw.mock.calls[0];
       expect(queryCall).toContain(customLimit);
     });
   });
 
   describe('Edge Case: Empty Results for Date Range', () => {
     it('should return empty arrays when no pageviews exist in date range', async () => {
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce([]);
+      mockQueryRaw.mockResolvedValueOnce([]);
 
       const startDate = new Date('2025-01-01');
       const endDate = new Date('2025-01-02');
@@ -354,11 +354,11 @@ describe('Referrer Sources Integration Tests', () => {
       const categories = await getReferrersByCategory(startDate, endDate);
       expect(categories).toEqual([]);
 
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce([]);
+      mockQueryRaw.mockResolvedValueOnce([]);
       const domains = await getReferrersByDomain(startDate, endDate, 50);
       expect(domains).toEqual([]);
 
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce([]);
+      mockQueryRaw.mockResolvedValueOnce([]);
       const urls = await getReferrerUrlsByDomain('google.com', startDate, endDate, 100);
       expect(urls).toEqual([]);
     });
@@ -373,7 +373,7 @@ describe('Referrer Sources Integration Tests', () => {
         { referrer_domain: 'bing.com', referrer_category: 'Search', pageviews: BigInt(150) },
       ];
 
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce(mockDomainData);
+      mockQueryRaw.mockResolvedValueOnce(mockDomainData);
 
       const startDate = new Date('2025-10-01');
       const endDate = new Date('2025-10-31');

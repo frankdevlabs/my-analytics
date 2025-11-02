@@ -5,26 +5,25 @@
 
 import { NextRequest } from 'next/server';
 import { prisma } from 'lib/db/prisma';
-import { getRedisClient } from 'lib/redis';
+import { getRedisClient, getRedisKey } from 'lib/redis';
 
 // Import the route handlers
 import { GET as getActiveVisitors } from '../../src/app/api/active-visitors/route';
-import { POST as trackPageview } from '../../src/app/api/track/route';
+import { POST as trackPageview } from '../../src/app/api/metrics/route';
 
-// Mock dependencies that are not part of the active visitors feature
-jest.mock('lib/geoip/maxmind-reader');
-jest.mock('lib/privacy/visitor-tracking');
-
-import { lookupCountryCode } from 'lib/geoip/maxmind-reader';
-import { checkAndRecordVisitor } from 'lib/privacy/visitor-tracking';
-
-const mockLookupCountryCode = lookupCountryCode as jest.MockedFunction<typeof lookupCountryCode>;
-const mockCheckAndRecordVisitor = checkAndRecordVisitor as jest.MockedFunction<typeof checkAndRecordVisitor>;
+// Import functions that will be mocked locally (not globally)
+import * as maxmindReader from 'lib/geoip/maxmind-reader';
+import * as visitorTracking from 'lib/privacy/visitor-tracking';
 
 describe('Active Visitors API Integration', () => {
   let redisClient: Awaited<ReturnType<typeof getRedisClient>>;
+  let mockLookupCountryCode: jest.SpyInstance;
+  let mockCheckAndRecordVisitor: jest.SpyInstance;
 
   beforeAll(async () => {
+    // Generate unique Redis prefix for this test file to prevent key collisions between test files
+    process.env.TEST_REDIS_PREFIX = `test-api-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
     // Get Redis client for test cleanup
     try {
       redisClient = await getRedisClient();
@@ -34,19 +33,23 @@ describe('Active Visitors API Integration', () => {
   });
 
   beforeEach(async () => {
-    // Reset mocks
-    jest.clearAllMocks();
-    mockLookupCountryCode.mockReturnValue('US');
-    mockCheckAndRecordVisitor.mockResolvedValue(true);
+    // Set up local mocks (not global - isolated to this test file)
+    mockLookupCountryCode = jest.spyOn(maxmindReader, 'lookupCountryCode').mockReturnValue('US');
+    mockCheckAndRecordVisitor = jest.spyOn(visitorTracking, 'checkAndRecordVisitor').mockResolvedValue(true);
 
     // Clean up Redis test data if available
     if (redisClient) {
       try {
-        await redisClient.del('active_visitors');
+        await redisClient.del(getRedisKey('active_visitors'));
       } catch {
         // Redis not available, skip cleanup
       }
     }
+  });
+
+  afterEach(() => {
+    // Restore all mocks to prevent pollution of other tests
+    jest.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -62,12 +65,15 @@ describe('Active Visitors API Integration', () => {
     // Clean up Redis
     if (redisClient) {
       try {
-        await redisClient.del('active_visitors');
+        await redisClient.del(getRedisKey('active_visitors'));
       } catch {
         // Redis not available, skip cleanup
       }
     }
     await prisma.$disconnect();
+
+    // Clean up environment variable after all tests in this file complete
+    delete process.env.TEST_REDIS_PREFIX;
   });
 
   describe('GET /api/active-visitors', () => {
@@ -79,7 +85,7 @@ describe('Active Visitors API Integration', () => {
 
       // Manually add active visitors to Redis
       const currentTimestamp = Math.floor(Date.now() / 1000);
-      await redisClient.zAdd('active_visitors', [
+      await redisClient.zAdd(getRedisKey('active_visitors'), [
         { score: currentTimestamp, value: 'visitor1' },
         { score: currentTimestamp - 60, value: 'visitor2' },
         { score: currentTimestamp - 120, value: 'visitor3' },
@@ -137,7 +143,7 @@ describe('Active Visitors API Integration', () => {
       }
 
       const currentTimestamp = Math.floor(Date.now() / 1000);
-      await redisClient.zAdd('active_visitors', [
+      await redisClient.zAdd(getRedisKey('active_visitors'), [
         { score: currentTimestamp, value: 'visitor_active_1' },
         { score: currentTimestamp - 299, value: 'visitor_active_2' }, // Just under 5 min
         { score: currentTimestamp - 301, value: 'visitor_expired_1' }, // Just over 5 min
@@ -189,7 +195,7 @@ describe('Active Visitors API Integration', () => {
       // Verify visitor was recorded in Redis
       const currentTimestamp = Math.floor(Date.now() / 1000);
       const threshold = currentTimestamp - 300;
-      const activeCount = await redisClient.zCount('active_visitors', threshold, '+inf');
+      const activeCount = await redisClient.zCount(getRedisKey('active_visitors'), threshold, '+inf');
 
       expect(activeCount).toBeGreaterThan(0);
     });

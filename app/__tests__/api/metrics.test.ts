@@ -237,12 +237,18 @@ describe('/api/metrics endpoint', () => {
         },
       });
 
+      // Suppress console.error for this test since we're intentionally testing error handling
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
       const response = await GET(request);
 
       // Should still return pixel (silent failure)
       expect(response.status).toBe(200);
       expect(response.headers.get('Content-Type')).toBe('image/gif');
       expect(prisma.$transaction).not.toHaveBeenCalled();
+
+      // Restore console.error
+      consoleErrorSpy.mockRestore();
     });
 
     it('should include CORS and CSP headers in GET response', async () => {

@@ -11,27 +11,26 @@
 
 import { NextRequest } from 'next/server';
 import { prisma } from 'lib/db/prisma';
-import { getRedisClient } from 'lib/redis';
+import { getRedisClient, getRedisKey } from 'lib/redis';
 import { generateVisitorHash } from 'lib/privacy/visitor-hash';
 
 // Import route handlers
 import { GET as getActiveVisitors } from '../../src/app/api/active-visitors/route';
-import { POST as trackPageview } from '../../src/app/api/track/route';
+import { POST as trackPageview } from '../../src/app/api/metrics/route';
 
-// Mock dependencies not part of this feature
-jest.mock('lib/geoip/maxmind-reader');
-jest.mock('lib/privacy/visitor-tracking');
-
-import { lookupCountryCode } from 'lib/geoip/maxmind-reader';
-import { checkAndRecordVisitor } from 'lib/privacy/visitor-tracking';
-
-const mockLookupCountryCode = lookupCountryCode as jest.MockedFunction<typeof lookupCountryCode>;
-const mockCheckAndRecordVisitor = checkAndRecordVisitor as jest.MockedFunction<typeof checkAndRecordVisitor>;
+// Import modules that will be mocked locally (not globally)
+import * as maxmindReader from 'lib/geoip/maxmind-reader';
+import * as visitorTracking from 'lib/privacy/visitor-tracking';
 
 describe('Active Visitors E2E Integration Tests', () => {
   let redisClient: Awaited<ReturnType<typeof getRedisClient>>;
+  let mockLookupCountryCode: jest.SpyInstance;
+  let mockCheckAndRecordVisitor: jest.SpyInstance;
 
   beforeAll(async () => {
+    // Generate unique Redis prefix for this test file to prevent key collisions between test files
+    process.env.TEST_REDIS_PREFIX = `test-e2e-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
     try {
       redisClient = await getRedisClient();
     } catch {
@@ -40,17 +39,22 @@ describe('Active Visitors E2E Integration Tests', () => {
   });
 
   beforeEach(async () => {
-    jest.clearAllMocks();
-    mockLookupCountryCode.mockReturnValue('US');
-    mockCheckAndRecordVisitor.mockResolvedValue(true);
+    // Set up local mocks (not global - isolated to this test file)
+    mockLookupCountryCode = jest.spyOn(maxmindReader, 'lookupCountryCode').mockReturnValue('US');
+    mockCheckAndRecordVisitor = jest.spyOn(visitorTracking, 'checkAndRecordVisitor').mockResolvedValue(true);
 
     if (redisClient) {
       try {
-        await redisClient.del('active_visitors');
+        await redisClient.del(getRedisKey('active_visitors'));
       } catch {
         // Redis not available, skip cleanup
       }
     }
+  });
+
+  afterEach(() => {
+    // Restore all mocks to prevent pollution of other tests
+    jest.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -65,12 +69,15 @@ describe('Active Visitors E2E Integration Tests', () => {
 
     if (redisClient) {
       try {
-        await redisClient.del('active_visitors');
+        await redisClient.del(getRedisKey('active_visitors'));
       } catch {
         // Redis not available, skip cleanup
       }
     }
     await prisma.$disconnect();
+
+    // Clean up environment variable after all tests in this file complete
+    delete process.env.TEST_REDIS_PREFIX;
   });
 
   /**
@@ -85,7 +92,7 @@ describe('Active Visitors E2E Integration Tests', () => {
 
     // Step 1: Track a pageview
     const trackPayload = {
-      page_id: 'clh9001234567890abcdefgh1',
+      page_id: 'c000000000000000000000001',
       path: '/test-e2e-active-visitor-flow',
       device_type: 'desktop',
       user_agent: 'Mozilla/5.0 (Test Browser)',
@@ -113,7 +120,7 @@ describe('Active Visitors E2E Integration Tests', () => {
     // Step 2: Verify Redis entry exists
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const threshold = currentTimestamp - 300;
-    const redisCount = await redisClient.zCount('active_visitors', threshold, '+inf');
+    const redisCount = await redisClient.zCount(getRedisKey('active_visitors'), threshold, '+inf');
     expect(redisCount).toBeGreaterThan(0);
 
     // Step 3: Query active visitor count via API
@@ -147,8 +154,9 @@ describe('Active Visitors E2E Integration Tests', () => {
     // Track all visitors concurrently
     await Promise.all(
       visitors.map(async (visitor, index) => {
+        const pageIdSuffix = (index + 2).toString();
         const payload = {
-          page_id: `clh900${index}234567890abcdefgh`,
+          page_id: `c00000000000000000000000${pageIdSuffix}`,
           path: '/test-e2e-active-visitor-multi',
           device_type: 'desktop',
           user_agent: visitor.ua,
@@ -199,8 +207,9 @@ describe('Active Visitors E2E Integration Tests', () => {
 
     // Track same visitor 3 times
     for (let i = 0; i < 3; i++) {
+      const pageIdSuffix = (i + 7).toString();
       const payload = {
-        page_id: `clh901${i}234567890abcdefgh`,
+        page_id: `c00000000000000000000000${pageIdSuffix}`,
         path: `/test-e2e-active-visitor-dedup-${i}`,
         device_type: 'desktop',
         user_agent: sameVisitor.ua,
@@ -237,7 +246,7 @@ describe('Active Visitors E2E Integration Tests', () => {
     const expectedHash = generateVisitorHash(sameVisitor.ip, sameVisitor.ua, today);
 
     // Count how many times this specific hash appears
-    const members = await redisClient.zRange('active_visitors', 0, -1);
+    const members = await redisClient.zRange(getRedisKey('active_visitors'), 0, -1);
     const hashCount = members.filter(member => member === expectedHash).length;
 
     // Should only appear once due to ZADD behavior (updates score if member exists)
@@ -295,7 +304,7 @@ describe('Active Visitors E2E Integration Tests', () => {
     const currentTimestamp = Math.floor(Date.now() / 1000);
 
     // Manually add visitors at different timestamps
-    await redisClient.zAdd('active_visitors', [
+    await redisClient.zAdd(getRedisKey('active_visitors'), [
       { score: currentTimestamp, value: 'visitor_now' },
       { score: currentTimestamp - 60, value: 'visitor_1min_ago' },
       { score: currentTimestamp - 120, value: 'visitor_2min_ago' },
@@ -332,7 +341,7 @@ describe('Active Visitors E2E Integration Tests', () => {
     const currentTimestamp = Math.floor(Date.now() / 1000);
 
     // Add mix of active and expired visitors
-    await redisClient.zAdd('active_visitors', [
+    await redisClient.zAdd(getRedisKey('active_visitors'), [
       { score: currentTimestamp, value: 'active_1' },
       { score: currentTimestamp - 100, value: 'active_2' },
       { score: currentTimestamp - 400, value: 'expired_1' },
@@ -341,14 +350,14 @@ describe('Active Visitors E2E Integration Tests', () => {
     ]);
 
     // Count total entries before cleanup
-    const beforeCleanup = await redisClient.zCount('active_visitors', '-inf', '+inf');
+    const beforeCleanup = await redisClient.zCount(getRedisKey('active_visitors'), '-inf', '+inf');
     expect(beforeCleanup).toBe(5);
 
     // Trigger cleanup by querying active visitors
     await getActiveVisitors();
 
     // Count total entries after cleanup
-    const afterCleanup = await redisClient.zCount('active_visitors', '-inf', '+inf');
+    const afterCleanup = await redisClient.zCount(getRedisKey('active_visitors'), '-inf', '+inf');
 
     // Should only have 2 active visitors left (expired ones removed)
     expect(afterCleanup).toBe(2);
@@ -370,10 +379,16 @@ describe('Active Visitors E2E Integration Tests', () => {
     };
 
     // Track 10 pageviews rapidly from same visitor
+    // Use unique timestamp-based IDs to avoid database constraint violations
     const trackPromises = [];
     for (let i = 0; i < 10; i++) {
+      // Generate unique page_id using timestamp + counter + random suffix
+      const timestamp = Date.now();
+      const random = Math.floor(Math.random() * 10000);
+      const pageId = `c${timestamp}${i}${random}`.substring(0, 25).padEnd(25, '0');
+
       const payload = {
-        page_id: `clh902${i}34567890abcdefgh`,
+        page_id: pageId,
         path: `/test-e2e-high-freq-${i}`,
         device_type: 'desktop',
         user_agent: visitor.ua,
@@ -403,12 +418,12 @@ describe('Active Visitors E2E Integration Tests', () => {
     const expectedHash = generateVisitorHash(visitor.ip, visitor.ua, today);
 
     // Verify only one entry for this visitor (ZADD updates score)
-    const members = await redisClient.zRange('active_visitors', 0, -1);
+    const members = await redisClient.zRange(getRedisKey('active_visitors'), 0, -1);
     const hashCount = members.filter(member => member === expectedHash).length;
     expect(hashCount).toBe(1);
 
     // Verify timestamp is recent (within last second)
-    const scores = await redisClient.zScore('active_visitors', expectedHash);
+    const scores = await redisClient.zScore(getRedisKey('active_visitors'), expectedHash);
     const currentTimestamp = Math.floor(Date.now() / 1000);
     expect(scores).toBeGreaterThanOrEqual(currentTimestamp - 2);
     expect(scores).toBeLessThanOrEqual(currentTimestamp + 1);

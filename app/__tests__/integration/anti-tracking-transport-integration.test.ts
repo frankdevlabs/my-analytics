@@ -10,71 +10,15 @@ import { NextRequest } from 'next/server';
 import { POST, GET } from '@/app/api/metrics/route';
 import { prisma } from 'lib/db/prisma';
 
-// Mock all external dependencies
-jest.mock('lib/db/prisma', () => ({
-  prisma: {
-    $transaction: jest.fn(),
-    pageview: {
-      create: jest.fn(),
-      findFirst: jest.fn(),
-    },
-  },
-}));
-
-jest.mock('lib/config/cors', () => ({
-  getCorsHeaders: jest.fn(() => ({
-    'Access-Control-Allow-Origin': 'http://localhost:3001',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Max-Age': '86400',
-    'Content-Security-Policy': "default-src 'self'",
-  })),
-  getPreflightCorsHeaders: jest.fn(() => ({
-    'Access-Control-Allow-Origin': 'http://localhost:3001',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Max-Age': '86400',
-    'Content-Security-Policy': "default-src 'self'",
-  })),
-}));
-
-jest.mock('lib/parsing/user-agent-parser', () => ({
-  parseUserAgent: jest.fn(() => ({
-    browser_name: 'Chrome',
-    browser_version: '120.0.0',
-    os_name: 'Windows',
-    os_version: '10',
-  })),
-}));
-
-jest.mock('lib/parsing/extract-major-version', () => ({
-  extractMajorVersion: jest.fn(() => '120'),
-}));
-
-jest.mock('lib/geoip/maxmind-reader', () => ({
-  lookupCountryCode: jest.fn(async () => 'US'),
-}));
-
-jest.mock('lib/privacy/visitor-hash', () => ({
-  generateVisitorHash: jest.fn(() => 'test-visitor-hash-123'),
-}));
-
-jest.mock('lib/privacy/visitor-tracking', () => ({
-  checkAndRecordVisitor: jest.fn(async () => true),
-}));
-
-jest.mock('lib/session/session-storage', () => ({
-  getOrCreateSession: jest.fn(async () => null),
-  updateSession: jest.fn(async () => {}),
-}));
-
-jest.mock('lib/active-visitors/active-visitor-tracking', () => ({
-  recordVisitorActivity: jest.fn(async () => {}),
-}));
-
-jest.mock('isbot', () => ({
-  isbot: jest.fn(() => false),
-}));
+// Import modules that will be mocked locally (not globally)
+import * as corsConfig from 'lib/config/cors';
+import * as uaParser from 'lib/parsing/user-agent-parser';
+import * as versionExtractor from 'lib/parsing/extract-major-version';
+import * as maxmindReader from 'lib/geoip/maxmind-reader';
+import * as visitorHash from 'lib/privacy/visitor-hash';
+import * as visitorTracking from 'lib/privacy/visitor-tracking';
+import * as sessionStorage from 'lib/session/session-storage';
+import * as activeVisitorTracking from 'lib/active-visitors/active-visitor-tracking';
 
 // Helper to create valid test payload
 function createValidPayload() {
@@ -110,8 +54,68 @@ function createValidPayload() {
 }
 
 describe('Anti-Tracking Transport Methods Integration', () => {
+  // Local spy declarations (not global mocks)
+  let mockGetCorsHeaders: jest.SpyInstance;
+  let mockPrismaTransaction: jest.SpyInstance;
+  let mockParseUserAgent: jest.SpyInstance;
+  let mockExtractMajorVersion: jest.SpyInstance;
+  let mockLookupCountryCode: jest.SpyInstance;
+  let mockGenerateVisitorHash: jest.SpyInstance;
+  let mockCheckAndRecordVisitor: jest.SpyInstance;
+  let mockGetOrCreateSession: jest.SpyInstance;
+  let mockUpdateSession: jest.SpyInstance;
+  let mockRecordVisitorActivity: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Set up local spies with default implementations
+    mockGetCorsHeaders = jest.spyOn(corsConfig, 'getCorsHeaders').mockReturnValue({
+      'Access-Control-Allow-Origin': 'http://localhost:3001',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400',
+      'Content-Security-Policy': "default-src 'self'",
+    });
+
+    mockPrismaTransaction = jest.spyOn(prisma, '$transaction').mockResolvedValue(undefined);
+
+    mockParseUserAgent = jest.spyOn(uaParser, 'parseUserAgent').mockReturnValue({
+      browser: 'Chrome',
+      os: 'Windows',
+      device_type: 'desktop',
+    });
+
+    mockExtractMajorVersion = jest.spyOn(versionExtractor, 'extractMajorVersion').mockReturnValue('120');
+
+    mockLookupCountryCode = jest.spyOn(maxmindReader, 'lookupCountryCode').mockReturnValue('US');
+
+    mockGenerateVisitorHash = jest.spyOn(visitorHash, 'generateVisitorHash').mockReturnValue('test-hash-123');
+
+    mockCheckAndRecordVisitor = jest.spyOn(visitorTracking, 'checkAndRecordVisitor').mockResolvedValue(true);
+
+    mockGetOrCreateSession = jest.spyOn(sessionStorage, 'getOrCreateSession').mockResolvedValue({
+      start_time: new Date().toISOString(),
+      page_count: 1,
+      last_seen: new Date().toISOString(),
+      initial_referrer: null,
+      utm_params: {},
+    });
+
+    mockUpdateSession = jest.spyOn(sessionStorage, 'updateSession').mockResolvedValue({
+      start_time: new Date().toISOString(),
+      page_count: 2,
+      last_seen: new Date().toISOString(),
+      initial_referrer: null,
+      utm_params: {},
+    });
+
+    mockRecordVisitorActivity = jest.spyOn(activeVisitorTracking, 'recordVisitorActivity').mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    // Restore all mocks to prevent pollution of other tests
+    jest.restoreAllMocks();
   });
 
   describe('Transport Method 1: sendBeacon/POST with JSON', () => {
@@ -128,7 +132,7 @@ describe('Anti-Tracking Transport Methods Integration', () => {
       });
 
       // Mock successful database transaction
-      (prisma.$transaction as jest.Mock).mockResolvedValue(undefined);
+      mockPrismaTransaction.mockResolvedValue(undefined);
 
       const response = await POST(request);
 
@@ -160,7 +164,7 @@ describe('Anti-Tracking Transport Methods Integration', () => {
         body: JSON.stringify(payload),
       });
 
-      (prisma.$transaction as jest.Mock).mockResolvedValue(undefined);
+      mockPrismaTransaction.mockResolvedValue(undefined);
 
       const response = await POST(request);
 
@@ -168,7 +172,7 @@ describe('Anti-Tracking Transport Methods Integration', () => {
       expect(prisma.$transaction).toHaveBeenCalled();
 
       // Verify the transaction was called with proper data structure
-      const transactionCall = (prisma.$transaction as jest.Mock).mock.calls[0][0];
+      const transactionCall = mockPrismaTransaction.mock.calls[0][0];
       expect(typeof transactionCall).toBe('function');
     });
   });
@@ -188,7 +192,7 @@ describe('Anti-Tracking Transport Methods Integration', () => {
         body: JSON.stringify(payload),
       });
 
-      (prisma.$transaction as jest.Mock).mockResolvedValue(undefined);
+      mockPrismaTransaction.mockResolvedValue(undefined);
 
       const response = await POST(request);
 
@@ -215,7 +219,7 @@ describe('Anti-Tracking Transport Methods Integration', () => {
         },
       });
 
-      (prisma.$transaction as jest.Mock).mockResolvedValue(undefined);
+      mockPrismaTransaction.mockResolvedValue(undefined);
 
       const response = await GET(request);
 
@@ -247,7 +251,7 @@ describe('Anti-Tracking Transport Methods Integration', () => {
         },
       });
 
-      (prisma.$transaction as jest.Mock).mockResolvedValue(undefined);
+      mockPrismaTransaction.mockResolvedValue(undefined);
 
       const response = await GET(request);
 
@@ -271,7 +275,7 @@ describe('Anti-Tracking Transport Methods Integration', () => {
         body: JSON.stringify(payload),
       });
 
-      (prisma.$transaction as jest.Mock).mockImplementation((fn) => {
+      mockPrismaTransaction.mockImplementation((fn) => {
         transactionCalls.push({ method: 'POST', fn });
         return Promise.resolve(undefined);
       });

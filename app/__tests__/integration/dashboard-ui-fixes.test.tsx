@@ -88,6 +88,12 @@ jest.mock('@/config/chart-theme', () => ({
 }));
 
 describe('Dashboard UI Fixes', () => {
+  // Note: UI library mocks (recharts, BaseChart) remain global as they're
+  // imported by components under test. Adding cleanup to prevent pollution.
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   /**
    * Test 1: Referrer Sources Chart
    * Verifies chart renders correctly (currently uses single color)

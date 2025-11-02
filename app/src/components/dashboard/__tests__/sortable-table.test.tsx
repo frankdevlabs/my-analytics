@@ -58,7 +58,7 @@ describe('SortableTable', () => {
   it('should sort data when column header is clicked', () => {
     render(<SortableTable data={mockData} columns={columns} />);
 
-    const nameHeader = screen.getByRole('button', { name: /name/i });
+    const nameHeader = screen.getByRole('columnheader', { name: /name/i });
     fireEvent.click(nameHeader);
 
     // After first click on new column, should sort descending (default)
@@ -71,7 +71,7 @@ describe('SortableTable', () => {
   it('should toggle sort direction on repeated clicks', () => {
     render(<SortableTable data={mockData} columns={columns} />);
 
-    const countHeader = screen.getByRole('button', { name: /count/i });
+    const countHeader = screen.getByRole('columnheader', { name: /count/i });
 
     // First click - descending (default for new column)
     fireEvent.click(countHeader);
@@ -95,14 +95,14 @@ describe('SortableTable', () => {
       />
     );
 
-    const countHeader = screen.getByRole('button', { name: /count/i });
+    const countHeader = screen.getByRole('columnheader', { name: /count/i });
     expect(countHeader).toHaveTextContent('↓'); // Descending indicator
   });
 
   it('should handle keyboard navigation on sortable headers', () => {
     render(<SortableTable data={mockData} columns={columns} />);
 
-    const nameHeader = screen.getByRole('button', { name: /name/i });
+    const nameHeader = screen.getByRole('columnheader', { name: /name/i });
 
     // Press Enter key
     fireEvent.keyDown(nameHeader, { key: 'Enter', code: 'Enter' });
@@ -122,7 +122,7 @@ describe('SortableTable', () => {
       />
     );
 
-    const countHeader = screen.getByRole('button', { name: /count/i });
+    const countHeader = screen.getByRole('columnheader', { name: /count/i });
     expect(countHeader).toHaveAttribute('aria-sort', 'descending');
   });
 
@@ -160,7 +160,7 @@ describe('SortableTable', () => {
 
     render(<SortableTable data={dataWithNulls} columns={columnsWithNullHandling} />);
 
-    const countHeader = screen.getByRole('button', { name: /count/i });
+    const countHeader = screen.getByRole('columnheader', { name: /count/i });
     fireEvent.click(countHeader);
 
     // Null values should be sorted to the end

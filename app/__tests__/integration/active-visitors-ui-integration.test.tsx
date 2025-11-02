@@ -7,12 +7,14 @@
  * 2. Badge updates after polling interval with changing data
  * 3. Badge handles network failures gracefully
  * 4. Badge recovers from temporary API failures
+ *
+ * Note: Uses real timers to test actual polling behavior.
  */
 
 import * as React from 'react';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, cleanup } from '@testing-library/react';
 import { ActiveVisitorBadge } from '@/components/dashboard/active-visitor-badge';
-import { getRedisClient } from 'lib/redis';
+import { getRedisClient, getRedisKey } from 'lib/redis';
 
 // Use real fetch, but control the API response
 const originalFetch = global.fetch;
@@ -21,40 +23,72 @@ describe('Active Visitors UI Integration', () => {
   let redisClient: Awaited<ReturnType<typeof getRedisClient>>;
 
   beforeAll(async () => {
+    // Generate unique Redis prefix for this test file to prevent key collisions between test files
+    process.env.TEST_REDIS_PREFIX = `test-ui-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
     try {
-      redisClient = await getRedisClient();
-    } catch {
-      console.warn('Redis not available - skipping UI integration tests');
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Redis connection timeout')), 5000)
+      );
+
+      redisClient = await Promise.race([
+        getRedisClient(),
+        timeoutPromise
+      ]) as Awaited<ReturnType<typeof getRedisClient>>;
+    } catch (error) {
+      console.warn('Redis not available - tests will be skipped:', error instanceof Error ? error.message : 'Unknown error');
+      redisClient = null as any;
     }
-  });
+  }, 10000); // Increase beforeAll timeout to 10s
 
   beforeEach(async () => {
-    jest.useFakeTimers();
-
     if (redisClient) {
       try {
-        await redisClient.del('active_visitors');
+        // Clean up only this test file's Redis key
+        await redisClient.del(getRedisKey('active_visitors'));
+        // Small wait to ensure cleanup is complete
+        await new Promise(resolve => setTimeout(resolve, 100));
       } catch {
-        // Redis not available
+        // Redis cleanup failed - not critical
       }
     }
   });
 
-  afterEach(() => {
-    jest.clearAllTimers();
-    jest.useRealTimers();
+  afterEach(async () => {
+    // Cleanup component and stop all intervals
+    cleanup();
+
+    // Restore original fetch
     global.fetch = originalFetch;
+
+    // Extra cleanup: ensure Redis is clean for next test
+    if (redisClient) {
+      try {
+        await redisClient.del(getRedisKey('active_visitors'));
+      } catch {
+        // Cleanup failed - not critical
+      }
+    }
   });
 
   afterAll(async () => {
     if (redisClient) {
       try {
-        await redisClient.del('active_visitors');
+        // Add timeout to prevent hanging during cleanup
+        const cleanupPromise = redisClient.del(getRedisKey('active_visitors'));
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Cleanup timeout')), 3000)
+        );
+        await Promise.race([cleanupPromise, timeoutPromise]);
       } catch {
-        // Redis not available
+        // Redis cleanup failed or timed out - not critical
       }
     }
-  });
+
+    // Clean up environment variable after all tests in this file complete
+    delete process.env.TEST_REDIS_PREFIX;
+  }, 5000); // Add timeout to afterAll hook
 
   /**
    * UI Integration Test 1: Badge displays correct count after real API call
@@ -68,7 +102,7 @@ describe('Active Visitors UI Integration', () => {
 
     // Setup Redis with active visitors
     const currentTimestamp = Math.floor(Date.now() / 1000);
-    await redisClient.zAdd('active_visitors', [
+    await redisClient.zAdd(getRedisKey('active_visitors'), [
       { score: currentTimestamp, value: 'visitor_ui_1' },
       { score: currentTimestamp - 60, value: 'visitor_ui_2' },
       { score: currentTimestamp - 120, value: 'visitor_ui_3' },
@@ -89,17 +123,13 @@ describe('Active Visitors UI Integration', () => {
 
     render(<ActiveVisitorBadge />);
 
-    // Wait for initial fetch and render
-    await act(async () => {
-      await jest.runOnlyPendingTimersAsync();
-    });
-
+    // Wait for initial fetch and render (component calls fetch immediately on mount)
     await waitFor(() => {
       expect(screen.getByText('3')).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
 
     expect(screen.getByText('active')).toBeInTheDocument();
-  });
+  }, 10000);
 
   /**
    * UI Integration Test 2: Badge updates when count changes
@@ -114,7 +144,7 @@ describe('Active Visitors UI Integration', () => {
     const currentTimestamp = Math.floor(Date.now() / 1000);
 
     // Start with 2 visitors
-    await redisClient.zAdd('active_visitors', [
+    await redisClient.zAdd(getRedisKey('active_visitors'), [
       { score: currentTimestamp, value: 'visitor_poll_1' },
       { score: currentTimestamp - 60, value: 'visitor_poll_2' },
     ]);
@@ -133,33 +163,21 @@ describe('Active Visitors UI Integration', () => {
     render(<ActiveVisitorBadge />);
 
     // Wait for initial fetch
-    await act(async () => {
-      await jest.runOnlyPendingTimersAsync();
-    });
-
     await waitFor(() => {
       expect(screen.getByText('2')).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
 
     // Add more visitors to Redis
-    await act(async () => {
-      await redisClient.zAdd('active_visitors', [
-        { score: currentTimestamp, value: 'visitor_poll_3' },
-        { score: currentTimestamp, value: 'visitor_poll_4' },
-      ]);
-    });
+    await redisClient.zAdd(getRedisKey('active_visitors'), [
+      { score: currentTimestamp, value: 'visitor_poll_3' },
+      { score: currentTimestamp, value: 'visitor_poll_4' },
+    ]);
 
-    // Advance time by 10 seconds to trigger polling
-    await act(async () => {
-      jest.advanceTimersByTime(10000);
-      await jest.runOnlyPendingTimersAsync();
-    });
-
-    // Should now show 4 visitors
+    // Wait for polling interval (10 seconds) + buffer
     await waitFor(() => {
       expect(screen.getByText('4')).toBeInTheDocument();
-    });
-  });
+    }, { timeout: 12000 }); // 10s polling + 2s buffer
+  }, 20000);
 
   /**
    * UI Integration Test 3: Badge shows dash when backend unavailable
@@ -190,34 +208,24 @@ describe('Active Visitors UI Integration', () => {
     render(<ActiveVisitorBadge />);
 
     // Wait for initial fetch (should fail)
-    await act(async () => {
-      await jest.runOnlyPendingTimersAsync();
-    });
-
     await waitFor(() => {
       expect(screen.getByText('—')).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
 
     // Setup Redis data
     const currentTimestamp = Math.floor(Date.now() / 1000);
-    await redisClient.zAdd('active_visitors', [
+    await redisClient.zAdd(getRedisKey('active_visitors'), [
       { score: currentTimestamp, value: 'visitor_recovery_1' },
     ]);
 
     // Fix the network
     fetchShouldFail = false;
 
-    // Advance time to trigger next poll
-    await act(async () => {
-      jest.advanceTimersByTime(10000);
-      await jest.runOnlyPendingTimersAsync();
-    });
-
-    // Should now show count
+    // Wait for next polling interval (10 seconds) + buffer
     await waitFor(() => {
       expect(screen.getByText('1')).toBeInTheDocument();
-    });
-  });
+    }, { timeout: 12000 }); // 10s polling + 2s buffer
+  }, 20000);
 
   /**
    * UI Integration Test 4: Badge handles zero active visitors correctly
@@ -230,7 +238,7 @@ describe('Active Visitors UI Integration', () => {
     }
 
     // Ensure Redis is empty
-    await redisClient.del('active_visitors');
+    await redisClient.del(getRedisKey('active_visitors'));
 
     const mockFetch = jest.fn((url: string) => {
       if (url.includes('/api/active-visitors')) {
@@ -246,16 +254,12 @@ describe('Active Visitors UI Integration', () => {
     render(<ActiveVisitorBadge />);
 
     // Wait for initial fetch
-    await act(async () => {
-      await jest.runOnlyPendingTimersAsync();
-    });
-
     await waitFor(() => {
       expect(screen.getByText('0')).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
 
     expect(screen.getByText('active')).toBeInTheDocument();
-  });
+  }, 10000);
 
   /**
    * UI Integration Test 5: Badge maintains ARIA live region announcements
@@ -268,7 +272,7 @@ describe('Active Visitors UI Integration', () => {
     }
 
     const currentTimestamp = Math.floor(Date.now() / 1000);
-    await redisClient.zAdd('active_visitors', [
+    await redisClient.zAdd(getRedisKey('active_visitors'), [
       { score: currentTimestamp, value: 'visitor_a11y_1' },
     ]);
 
@@ -286,34 +290,23 @@ describe('Active Visitors UI Integration', () => {
     render(<ActiveVisitorBadge />);
 
     // Wait for initial fetch
-    await act(async () => {
-      await jest.runOnlyPendingTimersAsync();
-    });
-
     await waitFor(() => {
       const badge = screen.getByLabelText('Active visitors count: 1');
       expect(badge).toBeInTheDocument();
       expect(badge).toHaveAttribute('aria-live', 'polite');
       expect(badge).toHaveAttribute('role', 'status');
-    });
+    }, { timeout: 5000 });
 
     // Add more visitors
-    await act(async () => {
-      await redisClient.zAdd('active_visitors', [
-        { score: currentTimestamp, value: 'visitor_a11y_2' },
-        { score: currentTimestamp, value: 'visitor_a11y_3' },
-      ]);
-    });
+    await redisClient.zAdd(getRedisKey('active_visitors'), [
+      { score: currentTimestamp, value: 'visitor_a11y_2' },
+      { score: currentTimestamp, value: 'visitor_a11y_3' },
+    ]);
 
-    // Trigger polling
-    await act(async () => {
-      jest.advanceTimersByTime(10000);
-      await jest.runOnlyPendingTimersAsync();
-    });
-
+    // Wait for polling interval (10 seconds) + buffer
     await waitFor(() => {
       const badge = screen.getByLabelText('Active visitors count: 3');
       expect(badge).toBeInTheDocument();
-    });
-  });
+    }, { timeout: 12000 }); // 10s polling + 2s buffer
+  }, 20000);
 });
