@@ -1,6 +1,6 @@
-import { getRedisClient } from '../redis';
+import { getRedisClient, getRedisKey } from '../redis';
 
-const REDIS_KEY = 'active_visitors';
+const REDIS_KEY_BASE = 'active_visitors';
 const ACTIVE_WINDOW_SECONDS = 300; // 5 minutes
 
 /**
@@ -13,14 +13,15 @@ const ACTIVE_WINDOW_SECONDS = 300; // 5 minutes
  * @remarks
  * - Gracefully degrades if Redis is unavailable (logs error but doesn't throw)
  * - Uses ZADD to store visitor hash with timestamp score
- * - Single Redis key 'active_visitors' for all visitors
+ * - Uses test-scoped key in test environment for isolation
  */
 export async function recordVisitorActivity(visitorHash: string): Promise<void> {
   try {
     const client = await getRedisClient();
     const currentTimestamp = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
+    const redisKey = getRedisKey(REDIS_KEY_BASE);
 
-    await client.zAdd(REDIS_KEY, {
+    await client.zAdd(redisKey, {
       score: currentTimestamp,
       value: visitorHash,
     });
@@ -41,18 +42,20 @@ export async function recordVisitorActivity(visitorHash: string): Promise<void> 
  * - Uses ZREMRANGEBYSCORE to cleanup expired entries (older than 5 minutes)
  * - Uses ZCOUNT to count active visitors within threshold
  * - Active window: 300 seconds (5 minutes)
+ * - Uses test-scoped key in test environment for isolation
  */
 export async function getActiveVisitorCount(): Promise<number | null> {
   try {
     const client = await getRedisClient();
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const threshold = currentTimestamp - ACTIVE_WINDOW_SECONDS;
+    const redisKey = getRedisKey(REDIS_KEY_BASE);
 
     // Clean up expired entries (older than 5 minutes)
-    await client.zRemRangeByScore(REDIS_KEY, '-inf', threshold);
+    await client.zRemRangeByScore(redisKey, '-inf', threshold);
 
     // Count active visitors (within last 5 minutes)
-    const count = await client.zCount(REDIS_KEY, threshold, '+inf');
+    const count = await client.zCount(redisKey, threshold, '+inf');
 
     return count;
   } catch (error) {
