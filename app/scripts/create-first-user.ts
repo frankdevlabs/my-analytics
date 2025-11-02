@@ -146,6 +146,7 @@ export async function createFirstUser(): Promise<void> {
     if (userExists) {
       console.log('✅ User already exists - skipping creation');
       console.log('🎉 First user is already configured!\n');
+      await disconnectPrisma();
       process.exit(0);
     }
 
@@ -155,15 +156,19 @@ export async function createFirstUser(): Promise<void> {
     await createAndVerifyUser(email, password, name);
 
     // Success!
+    await disconnectPrisma();
     process.exit(0);
   } catch (error) {
+    // Re-throw if this is a process.exit error from testing
+    if (error instanceof Error && error.message.startsWith('Process.exit called with code')) {
+      throw error;
+    }
+
     // Log error and exit with failure code
     console.error('\n❌ Failed to create first user:');
     console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  } finally {
-    // Always clean up database connection
     await disconnectPrisma();
+    process.exit(1);
   }
 }
 

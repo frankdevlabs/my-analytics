@@ -10,7 +10,9 @@ import {
 // Mock all dependencies
 jest.mock('../../lib/db/users');
 jest.mock('../../lib/auth/hash');
-jest.mock('../../lib/db/prisma');
+jest.mock('../../lib/db/prisma', () => ({
+  disconnectPrisma: jest.fn(),
+}));
 
 import { getUserCount, createUser, getUserByEmail } from '../../lib/db/users';
 import { hashPassword, verifyPassword } from '../../lib/auth/hash';

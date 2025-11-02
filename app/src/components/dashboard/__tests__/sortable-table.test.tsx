@@ -8,7 +8,8 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { SortableTable, ColumnConfig } from '../sortable-table';
 
 describe('SortableTable', () => {
@@ -55,35 +56,48 @@ describe('SortableTable', () => {
     expect(screen.getByText('40.0%')).toBeInTheDocument();
   });
 
-  it('should sort data when column header is clicked', () => {
+  it('should sort data when column header is clicked', async () => {
+    const user = userEvent.setup();
     render(<SortableTable data={mockData} columns={columns} />);
 
     const nameHeader = screen.getByRole('columnheader', { name: /name/i });
-    fireEvent.click(nameHeader);
+    const button = nameHeader.querySelector('button');
+    await user.click(button!);
 
-    // After first click on new column, should sort descending (default)
-    const rows = screen.getAllByRole('row').slice(1); // Skip header row
-    expect(rows[0]).toHaveTextContent('Tablet');
-    expect(rows[1]).toHaveTextContent('Mobile');
-    expect(rows[2]).toHaveTextContent('Desktop');
+    // Wait for sort to be applied
+    await waitFor(() => {
+      const rows = screen.getAllByRole('row').slice(1); // Skip header row
+      const cells = rows.map(row => row.querySelectorAll('td')[0].textContent);
+      // First click on new column uses descending (default for new column)
+      // Descending alphabetical: T > M > D
+      expect(cells).toEqual(['Tablet', 'Mobile', 'Desktop']);
+    });
   });
 
-  it('should toggle sort direction on repeated clicks', () => {
+  it('should toggle sort direction on repeated clicks', async () => {
+    const user = userEvent.setup();
     render(<SortableTable data={mockData} columns={columns} />);
 
     const countHeader = screen.getByRole('columnheader', { name: /count/i });
+    const button = countHeader.querySelector('button');
 
     // First click - descending (default for new column)
-    fireEvent.click(countHeader);
-    let rows = screen.getAllByRole('row').slice(1);
-    expect(rows[0]).toHaveTextContent('Desktop');
-    expect(rows[0]).toHaveTextContent('100');
+    await user.click(button!);
+    await waitFor(() => {
+      const rows = screen.getAllByRole('row').slice(1);
+      const firstRowCells = rows[0].querySelectorAll('td');
+      expect(firstRowCells[0].textContent).toBe('Desktop');
+      expect(firstRowCells[1].textContent).toBe('100');
+    });
 
     // Second click - ascending
-    fireEvent.click(countHeader);
-    rows = screen.getAllByRole('row').slice(1);
-    expect(rows[0]).toHaveTextContent('Tablet');
-    expect(rows[0]).toHaveTextContent('20');
+    await user.click(button!);
+    await waitFor(() => {
+      const rows = screen.getAllByRole('row').slice(1);
+      const firstRowCells = rows[0].querySelectorAll('td');
+      expect(firstRowCells[0].textContent).toBe('Tablet');
+      expect(firstRowCells[1].textContent).toBe('20');
+    });
   });
 
   it('should display sort indicators on headers', () => {
@@ -99,17 +113,19 @@ describe('SortableTable', () => {
     expect(countHeader).toHaveTextContent('↓'); // Descending indicator
   });
 
-  it('should handle keyboard navigation on sortable headers', () => {
+  it('should handle keyboard navigation on sortable headers', async () => {
+    const user = userEvent.setup();
     render(<SortableTable data={mockData} columns={columns} />);
 
     const nameHeader = screen.getByRole('columnheader', { name: /name/i });
+    const button = nameHeader.querySelector('button');
 
     // Press Enter key
-    fireEvent.keyDown(nameHeader, { key: 'Enter', code: 'Enter' });
+    await user.type(button!, '{Enter}');
     expect(nameHeader).toHaveAttribute('aria-sort');
 
     // Press Space key
-    fireEvent.keyDown(nameHeader, { key: ' ', code: 'Space' });
+    await user.type(button!, ' ');
     expect(nameHeader).toHaveAttribute('aria-sort');
   });
 
@@ -132,7 +148,8 @@ describe('SortableTable', () => {
     expect(screen.getByText('No data available')).toBeInTheDocument();
   });
 
-  it('should handle null values in sorting', () => {
+  it('should handle null values in sorting', async () => {
+    const user = userEvent.setup();
     const dataWithNulls = [
       { name: 'A', count: 100, percentage: 50 },
       { name: 'B', count: null, percentage: 30 },
@@ -161,10 +178,14 @@ describe('SortableTable', () => {
     render(<SortableTable data={dataWithNulls} columns={columnsWithNullHandling} />);
 
     const countHeader = screen.getByRole('columnheader', { name: /count/i });
-    fireEvent.click(countHeader);
+    const button = countHeader.querySelector('button');
+    await user.click(button!);
 
-    // Null values should be sorted to the end
-    const rows = screen.getAllByRole('row').slice(1);
-    expect(rows[2]).toHaveTextContent('B');
+    // Null values should be sorted to the end (descending sort puts nulls last)
+    await waitFor(() => {
+      const rows = screen.getAllByRole('row').slice(1);
+      const lastRowName = rows[2].querySelectorAll('td')[0].textContent;
+      expect(lastRowName).toBe('B');
+    });
   });
 });
