@@ -51,7 +51,6 @@ describe('cleanupOldPageviews', () => {
           lt: expect.any(Date),
         },
       },
-      take: 10000,
     });
   });
 
