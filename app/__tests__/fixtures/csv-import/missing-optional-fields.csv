@@ -1,0 +1,6 @@
+datapoint,uuid,added_iso,session_id,hostname,path,query,document_referrer,device_type,browser_name,browser_version,os_name,os_version,viewport_width,viewport_height,screen_width,screen_height,lang_language,timezone,country_code,utm_source,utm_medium,utm_campaign,utm_content,utm_term,duration_seconds,scrolled_percentage,is_unique,is_robot,user_agent
+pageview,clh7p1q8b0000qzrmn1h2w3x1,2025-11-01T10:00:00Z,,example.com,/page-1,,,desktop,,,,,,,,,,,,,,,,,,,false,false,Mozilla/5.0
+pageview,clh7p1q8b0000qzrmn1h2w3x2,2025-11-01T10:05:00Z,,example.com,/page-2,,,mobile,,,,,,,,,,,,,,,,,,,false,false,Mozilla/5.0
+pageview,clh7p1q8b0000qzrmn1h2w3x3,2025-11-01T10:10:00Z,,example.com,/page-3,,,tablet,,,,,,,,,,,,,,,,,,,false,false,Mozilla/5.0
+pageview,clh7p1q8b0000qzrmn1h2w3x4,2025-11-01T10:15:00Z,,example.com,/page-4,,,desktop,,,,,,,,,,,,,,,,,,,false,false,Mozilla/5.0
+pageview,clh7p1q8b0000qzrmn1h2w3x5,2025-11-01T10:20:00Z,,example.com,/page-5,,,mobile,,,,,,,,,,,,,,,,,,,false,false,Mozilla/5.0
