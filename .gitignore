@@ -59,5 +59,8 @@ agent-os/
 data/*
 !data/.gitkeep
 
+# CSV data files
+app/data/*.csv
+
 DEPLOYMENT.md
 GATSBY_INTEGRATION.md
