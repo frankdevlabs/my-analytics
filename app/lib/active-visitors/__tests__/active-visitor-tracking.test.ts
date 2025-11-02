@@ -9,12 +9,13 @@
  */
 
 import { recordVisitorActivity, getActiveVisitorCount } from '../active-visitor-tracking';
-import { getRedisClient } from '../../redis';
+import { getRedisClient, getRedisKey } from '../../redis';
 
-// Mock the Redis client
+// Mock the Redis client and getRedisKey
 jest.mock('../../redis');
 
 const mockGetRedisClient = getRedisClient as jest.MockedFunction<typeof getRedisClient>;
+const mockGetRedisKey = getRedisKey as jest.MockedFunction<typeof getRedisKey>;
 
 interface MockRedisClient {
   zAdd: jest.Mock;
@@ -35,6 +36,9 @@ describe('Active Visitor Tracking Service', () => {
     };
 
     mockGetRedisClient.mockResolvedValue(mockRedisClient as any);
+
+    // Mock getRedisKey to return the base key (simulating no test prefix)
+    mockGetRedisKey.mockImplementation((key: string) => key);
 
     // Spy on console.error to verify error logging
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
