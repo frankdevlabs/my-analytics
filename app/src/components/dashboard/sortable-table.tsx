@@ -187,23 +187,27 @@ export function SortableTable({
                 return (
                   <th
                     key={column.key}
-                    className={`py-2 px-4 font-body text-sm font-semibold min-w-[120px] cursor-pointer hover:bg-foreground/5 transition-colors ${alignClass}`}
+                    className={`py-2 px-4 font-body text-sm font-semibold min-w-[120px] ${alignClass}`}
                     scope="col"
-                    tabIndex={0}
-                    aria-sort={
-                      isCurrentSort
-                        ? sortDirection === 'asc'
-                          ? 'ascending'
-                          : 'descending'
-                        : 'none'
-                    }
-                    onClick={() => handleSort(column.key)}
-                    onKeyDown={(e) => handleKeyDown(e, column.key)}
                   >
-                    <div className={`flex items-center ${column.align === 'right' ? 'justify-end' : column.align === 'center' ? 'justify-center' : 'justify-start'}`}>
-                      {column.label}
-                      {renderSortIndicator(column.key)}
-                    </div>
+                    <button
+                      type="button"
+                      className="w-full cursor-pointer hover:bg-foreground/5 transition-colors focus:outline-none focus:ring-2 focus:ring-foreground/20 rounded px-0 py-0 bg-transparent border-none font-body text-sm font-semibold"
+                      aria-sort={
+                        isCurrentSort
+                          ? sortDirection === 'asc'
+                            ? 'ascending'
+                            : 'descending'
+                          : 'none'
+                      }
+                      onClick={() => handleSort(column.key)}
+                      onKeyDown={(e) => handleKeyDown(e, column.key)}
+                    >
+                      <div className={`flex items-center ${column.align === 'right' ? 'justify-end' : column.align === 'center' ? 'justify-center' : 'justify-start'}`}>
+                        {column.label}
+                        {renderSortIndicator(column.key)}
+                      </div>
+                    </button>
                   </th>
                 );
               }
