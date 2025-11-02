@@ -11,7 +11,7 @@ describe('Validation Schemas', () => {
     it('should accept all 36 valid fields', () => {
       const validPayload = {
         // Identity & Timing (5 fields)
-        page_id: 'clh1234567890abcdefghijk',
+        page_id: 'clh1234567890abcdefghijk1',
         added_iso: '2025-10-24T10:30:00.000Z',
         session_id: '550e8400-e29b-41d4-a716-446655440000',
 
@@ -74,7 +74,7 @@ describe('Validation Schemas', () => {
         user_agent: 'Mozilla/5.0',
         added_iso: '2025-10-24T10:30:00.000Z',
         duration_seconds: 0,
-        page_id: 'clh1234567890abcdefghijk',
+        page_id: 'clh1234567890abcdefghijk1',
         is_internal_referrer: false,
         visibility_changes: 0,
       };
@@ -94,7 +94,7 @@ describe('Validation Schemas', () => {
         user_agent: 'Mozilla/5.0',
         added_iso: '2025-10-24T10:30:00.000Z',
         duration_seconds: 0,
-        page_id: 'clh1234567890abcdefghijk',
+        page_id: 'clh1234567890abcdefghijk1',
         hostname: 'a'.repeat(256), // Exceeds 255
         is_internal_referrer: false,
         visibility_changes: 0,
@@ -110,7 +110,7 @@ describe('Validation Schemas', () => {
         user_agent: 'a'.repeat(1001), // Exceeds 1000
         added_iso: '2025-10-24T10:30:00.000Z',
         duration_seconds: 0,
-        page_id: 'clh1234567890abcdefghijk',
+        page_id: 'clh1234567890abcdefghijk1',
         is_internal_referrer: false,
         visibility_changes: 0,
       };
@@ -125,7 +125,7 @@ describe('Validation Schemas', () => {
         user_agent: 'Mozilla/5.0',
         added_iso: '2025-10-24T10:30:00.000Z',
         duration_seconds: 0,
-        page_id: 'clh1234567890abcdefghijk',
+        page_id: 'clh1234567890abcdefghijk1',
         scrolled_percentage: 101, // Exceeds 100
         is_internal_referrer: false,
         visibility_changes: 0,
@@ -165,7 +165,7 @@ describe('Validation Schemas', () => {
         user_agent: 'Mozilla/5.0',
         added_iso: '2025-10-24T10:30:00.000Z',
         duration_seconds: 0,
-        page_id: 'clh1234567890abcdefghijk',
+        page_id: 'clh1234567890abcdefghijk1',
         is_internal_referrer: false,
         visibility_changes: 0,
       };
@@ -177,7 +177,7 @@ describe('Validation Schemas', () => {
   describe('AppendPayloadSchema', () => {
     it('should validate append payload with all required fields', () => {
       const validPayload = {
-        page_id: 'clh1234567890abcdefghijk',
+        page_id: 'clh1234567890abcdefghijk1',
         duration_seconds: 45,
         scrolled_percentage: 75,
       };
@@ -191,7 +191,7 @@ describe('Validation Schemas', () => {
 
     it('should accept optional scrolled_percentage', () => {
       const payloadWithoutScroll = {
-        page_id: 'clh1234567890abcdefghijk',
+        page_id: 'clh1234567890abcdefghijk1',
         duration_seconds: 30,
       };
 
@@ -204,7 +204,7 @@ describe('Validation Schemas', () => {
 
     it('should enforce scrolled_percentage range (0-100)', () => {
       const invalidScroll = {
-        page_id: 'clh1234567890abcdefghijk',
+        page_id: 'clh1234567890abcdefghijk1',
         duration_seconds: 45,
         scrolled_percentage: 150,
       };
@@ -219,7 +219,7 @@ describe('Validation Schemas', () => {
       const validPayload = {
         event_name: 'button_click',
         event_metadata: { button_id: 'signup', page_section: 'hero' },
-        page_id: 'clh1234567890abcdefghijk',
+        page_id: 'clh1234567890abcdefghijk1',
         session_id: '550e8400-e29b-41d4-a716-446655440000',
         path: '/signup',
         timestamp: '2025-10-24T10:30:00.000Z',
