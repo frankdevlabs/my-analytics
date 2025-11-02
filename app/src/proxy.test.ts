@@ -5,22 +5,30 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-// Mock next-auth/jwt BEFORE importing proxy
-jest.mock('next-auth/jwt', () => ({
-  getToken: jest.fn(),
+// Mock the auth wrapper from lib/auth/config
+jest.mock('../lib/auth/config', () => ({
+  auth: jest.fn((middleware) => middleware),
 }));
 
-import { getToken } from 'next-auth/jwt';
-import type { JWT } from 'next-auth/jwt';
 import { proxy } from './proxy';
 
-const mockGetToken = getToken as jest.MockedFunction<typeof getToken>;
+/**
+ * Helper function to create mock event context
+ * NextAuth's auth() wrapper expects AppRouteHandlerFnContext, not NextFetchEvent
+ * We use a minimal mock that satisfies the type system
+ */
+function createMockEvent(): any {
+  return {
+    waitUntil: jest.fn(),
+    passThroughOnException: jest.fn(),
+  };
+}
 
 /**
  * Helper function to create mock NextRequest objects
  * Uses plain object with required properties to avoid URL property setter issues
  */
-function createMockRequest(pathname: string, environment?: string): NextRequest {
+function createMockRequest(pathname: string, environment?: string, auth?: any): NextRequest {
   const baseUrl = 'http://localhost:3000';
   const url = `${baseUrl}${pathname}`;
 
@@ -41,6 +49,7 @@ function createMockRequest(pathname: string, environment?: string): NextRequest 
     },
     url,
     headers: new Headers(),
+    auth, // Add auth property for NextAuth
   } as unknown as NextRequest;
 
   return mockRequest;
@@ -58,96 +67,90 @@ describe('Proxy', () => {
 
   describe('Public routes', () => {
     it('should allow access to /login without authentication', async () => {
-      mockGetToken.mockResolvedValue(null);
       const request = createMockRequest('/login');
+      const event = createMockEvent();
 
-      const response = await proxy(request, {} as any);
+      const response = await proxy(request, event);
 
       expect(response).toBeInstanceOf(NextResponse);
       // NextResponse.next() doesn't redirect, so no redirect property
-      expect(mockGetToken).not.toHaveBeenCalled();
     });
 
     it('should allow access to /api/track without authentication', async () => {
-      mockGetToken.mockResolvedValue(null);
       const request = createMockRequest('/api/track');
+      const event = createMockEvent();
 
-      const response = await proxy(request, {} as any);
+      const response = await proxy(request, event);
 
       expect(response).toBeInstanceOf(NextResponse);
-      expect(mockGetToken).not.toHaveBeenCalled();
     });
 
     it('should allow access to /api/auth/* without authentication', async () => {
-      mockGetToken.mockResolvedValue(null);
       const request = createMockRequest('/api/auth/signin');
+      const event = createMockEvent();
 
-      const response = await proxy(request, {} as any);
+      const response = await proxy(request, event);
 
       expect(response).toBeInstanceOf(NextResponse);
-      expect(mockGetToken).not.toHaveBeenCalled();
     });
 
     it('should allow access to /api/auth/callback/credentials', async () => {
-      mockGetToken.mockResolvedValue(null);
       const request = createMockRequest('/api/auth/callback/credentials');
+      const event = createMockEvent();
 
-      const response = await proxy(request, {} as any);
+      const response = await proxy(request, event);
 
       expect(response).toBeInstanceOf(NextResponse);
-      expect(mockGetToken).not.toHaveBeenCalled();
     });
 
     it('should allow access to /fb-a7k2.js without authentication', async () => {
-      mockGetToken.mockResolvedValue(null);
       const request = createMockRequest('/fb-a7k2.js');
+      const event = createMockEvent();
 
-      const response = await proxy(request, {} as any);
+      const response = await proxy(request, event);
 
       expect(response).toBeInstanceOf(NextResponse);
-      expect(mockGetToken).not.toHaveBeenCalled();
     });
   });
 
   describe('Tracker.js serving', () => {
     it('should serve tracker.js without authentication', async () => {
       const request = createMockRequest('/tracker.js', 'development');
+      const event = createMockEvent();
 
-      const response = await proxy(request, {} as any);
+      const response = await proxy(request, event);
 
       expect(response).toBeInstanceOf(NextResponse);
       // In development, should rewrite to /tracker.js
-      expect(mockGetToken).not.toHaveBeenCalled();
     });
 
     it('should rewrite tracker.js to tracker.min.js in production', async () => {
       const request = createMockRequest('/tracker.js', 'production');
+      const event = createMockEvent();
 
-      const response = await proxy(request, {} as any);
+      const response = await proxy(request, event);
 
       expect(response).toBeInstanceOf(NextResponse);
       // Verify it's a rewrite response (implementation detail)
-      expect(mockGetToken).not.toHaveBeenCalled();
     });
   });
 
   describe('Protected routes - unauthenticated', () => {
     it('should redirect to /login when accessing dashboard without auth', async () => {
-      mockGetToken.mockResolvedValue(null);
-      const request = createMockRequest('/dashboard');
+      const request = createMockRequest('/dashboard', undefined, null); // null auth = unauthenticated
+      const event = createMockEvent();
 
-      const response = await proxy(request, {} as any);
+      const response = await proxy(request, event);
 
       expect(response).toBeInstanceOf(NextResponse);
       expect(response?.status).toBe(307); // Redirect status
-      expect(mockGetToken).toHaveBeenCalled();
     });
 
     it('should set callbackUrl parameter when redirecting to login', async () => {
-      mockGetToken.mockResolvedValue(null);
-      const request = createMockRequest('/dashboard/analytics');
+      const request = createMockRequest('/dashboard/analytics', undefined, null);
+      const event = createMockEvent();
 
-      const response = await proxy(request, {} as any);
+      const response = await proxy(request, event);
 
       expect(response).toBeInstanceOf(NextResponse);
       expect(response?.status).toBe(307);
@@ -159,65 +162,67 @@ describe('Proxy', () => {
     });
 
     it('should redirect root path to login when unauthenticated', async () => {
-      mockGetToken.mockResolvedValue(null);
-      const request = createMockRequest('/');
+      const request = createMockRequest('/', undefined, null);
+      const event = createMockEvent();
 
-      const response = await proxy(request, {} as any);
+      const response = await proxy(request, event);
 
       expect(response).toBeInstanceOf(NextResponse);
       expect(response?.status).toBe(307);
-      expect(mockGetToken).toHaveBeenCalled();
     });
   });
 
   describe('Protected routes - authenticated', () => {
     it('should allow access to dashboard when authenticated', async () => {
-      mockGetToken.mockResolvedValue({
-        id: 'user123',
-        email: 'user@example.com',
-        name: 'Test User',
-      } as JWT);
+      const mockAuth = {
+        user: {
+          id: 'user123',
+          email: 'user@example.com',
+          name: 'Test User',
+        },
+      };
+      const request = createMockRequest('/dashboard', undefined, mockAuth);
+      const event = createMockEvent();
 
-      const request = createMockRequest('/dashboard');
-
-      const response = await proxy(request, {} as any);
+      const response = await proxy(request, event);
 
       expect(response).toBeInstanceOf(NextResponse);
       // Should not redirect - status should not be 307
       expect(response?.status).not.toBe(307);
-      expect(mockGetToken).toHaveBeenCalled();
     });
 
     it('should allow access to root path when authenticated', async () => {
-      mockGetToken.mockResolvedValue({
-        id: 'user123',
-        email: 'user@example.com',
-        name: 'Test User',
-      } as JWT);
+      const mockAuth = {
+        user: {
+          id: 'user123',
+          email: 'user@example.com',
+          name: 'Test User',
+        },
+      };
+      const request = createMockRequest('/', undefined, mockAuth);
+      const event = createMockEvent();
 
-      const request = createMockRequest('/');
-
-      const response = await proxy(request, {} as any);
+      const response = await proxy(request, event);
 
       expect(response).toBeInstanceOf(NextResponse);
       expect(response?.status).not.toBe(307);
-      expect(mockGetToken).toHaveBeenCalled();
     });
 
     it('should allow access to any protected route when authenticated', async () => {
-      mockGetToken.mockResolvedValue({
-        id: 'user123',
-        email: 'user@example.com',
-        name: 'Test User',
-      } as JWT);
+      const mockAuth = {
+        user: {
+          id: 'user123',
+          email: 'user@example.com',
+          name: 'Test User',
+        },
+      };
+      const request = createMockRequest('/settings/profile', undefined, mockAuth);
+      const event = createMockEvent();
 
-      const request = createMockRequest('/settings/profile');
-
-      const response = await proxy(request, {} as any);
+      const response = await proxy(request, event);
 
       expect(response).toBeInstanceOf(NextResponse);
       expect(response?.status).not.toBe(307);
-      expect(mockGetToken).toHaveBeenCalled();
     });
   });
 });
