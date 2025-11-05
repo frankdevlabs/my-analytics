@@ -56,6 +56,7 @@ export const authConfig: NextAuthConfig = {
             id: user.id,
             email: user.email,
             name: user.name,
+            mfaEnabled: user.mfaEnabled,
           };
         } catch (error) {
           console.error('Authorization error:', error);
@@ -72,21 +73,34 @@ export const authConfig: NextAuthConfig = {
     signIn: '/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
-      // Add user id to token on sign in
+    async jwt({ token, user, trigger }) {
+      // Add user data to token on sign in
       if (user) {
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
+        token.mfaEnabled = user.mfaEnabled;
+        // Initially set mfaVerified to false if MFA is enabled
+        // This will be set to true after successful MFA verification
+        token.mfaVerified = user.mfaEnabled ? false : true;
       }
+
+      // Allow manual token updates for MFA verification
+      if (trigger === 'update') {
+        // Token updates will be handled by API routes
+        return token;
+      }
+
       return token;
     },
     async session({ session, token }) {
-      // Add user id to session from token
+      // Add user data and MFA status to session from token
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string | null;
+        session.user.mfaEnabled = token.mfaEnabled as boolean;
+        session.user.mfaVerified = token.mfaVerified as boolean;
       }
       return session;
     },
