@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +29,7 @@ interface MFAVerifyFormProps {
  */
 export function MFAVerifyForm({ callbackUrl = '/' }: MFAVerifyFormProps) {
   const router = useRouter();
+  const { update } = useSession();
   const [code, setCode] = useState('');
   const [useBackupCode, setUseBackupCode] = useState(false);
   const [error, setError] = useState('');
@@ -53,6 +55,10 @@ export function MFAVerifyForm({ callbackUrl = '/' }: MFAVerifyFormProps) {
       if (!response.ok) {
         throw new Error(data.error || 'Verification failed');
       }
+
+      // Update the session to mark MFA as verified
+      // This triggers the JWT callback with trigger='update'
+      await update({ mfaVerified: true });
 
       // Redirect to callback URL
       router.push(callbackUrl);

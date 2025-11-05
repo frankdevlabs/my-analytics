@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,6 +35,7 @@ interface SetupData {
  */
 export function MFASetupForm() {
   const router = useRouter();
+  const { update } = useSession();
   const [step, setStep] = useState<'loading' | 'scan' | 'verify' | 'complete'>('loading');
   const [setupData, setSetupData] = useState<SetupData | null>(null);
   const [token, setToken] = useState('');
@@ -85,6 +87,13 @@ export function MFASetupForm() {
       if (!response.ok) {
         throw new Error(data.error || 'Verification failed');
       }
+
+      // Update session to reflect MFA is now enabled and verified
+      // Since user just enabled it, they're considered verified for this session
+      await update({
+        mfaEnabled: true,
+        mfaVerified: true
+      });
 
       // Store backup codes and move to complete step
       setBackupCodes(data.backupCodes);

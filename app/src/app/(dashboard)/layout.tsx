@@ -13,7 +13,8 @@ interface DashboardLayoutProps {
 
 /**
  * Dashboard layout component
- * Checks authentication and wraps authenticated dashboard pages
+ * Checks authentication and MFA verification before allowing access
+ * This provides defense-in-depth alongside middleware
  */
 export default async function DashboardLayout({
   children,
@@ -26,6 +27,12 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  // Render children for authenticated users
+  // CRITICAL SECURITY CHECK: Enforce MFA verification
+  // If user has MFA enabled but hasn't verified it yet, redirect to verification
+  if (session.user.mfaEnabled && !session.user.mfaVerified) {
+    redirect('/mfa/verify');
+  }
+
+  // Render children for authenticated and MFA-verified users
   return <>{children}</>;
 }
