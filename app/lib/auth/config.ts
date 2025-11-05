@@ -73,7 +73,7 @@ export const authConfig: NextAuthConfig = {
     signIn: '/login',
   },
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, session }) {
       // Add user data to token on sign in
       if (user) {
         token.id = user.id;
@@ -86,9 +86,16 @@ export const authConfig: NextAuthConfig = {
       }
 
       // Allow manual token updates for MFA verification
-      if (trigger === 'update') {
-        // Token updates will be handled by API routes
-        return token;
+      // This is triggered by calling update() on the client side
+      if (trigger === 'update' && session) {
+        // Update mfaVerified flag if provided in session update
+        if (typeof session.mfaVerified === 'boolean') {
+          token.mfaVerified = session.mfaVerified;
+        }
+        // Update mfaEnabled flag if provided
+        if (typeof session.mfaEnabled === 'boolean') {
+          token.mfaEnabled = session.mfaEnabled;
+        }
       }
 
       return token;
