@@ -80,14 +80,30 @@ model Event {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique @db.VarChar(255)
-  password  String   @db.VarChar(255)
-  name      String?  @db.VarChar(255)
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  id          String       @id @default(cuid())
+  email       String       @unique @db.VarChar(255)
+  password    String       @db.VarChar(255)
+  name        String?      @db.VarChar(255)
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  mfaEnabled  Boolean      @default(false)
+  mfaSecret   String?      @db.VarChar(500)
+  backupCodes BackupCode[]
 
   @@index([email], map: "idx_users_email")
   @@map("users")
+}
+
+model BackupCode {
+  id        String    @id @default(cuid())
+  userId    String
+  code      String    @db.VarChar(255)
+  used      Boolean   @default(false)
+  usedAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_backup_codes_user_id")
+  @@map("backup_codes")
 }
 
 enum DeviceType {

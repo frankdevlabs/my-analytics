@@ -49,8 +49,21 @@ export function LoginForm({ callbackUrl = '/' }: LoginFormProps) {
       if (result?.error) {
         setError('Invalid email or password. Please try again.');
       } else if (result?.ok) {
-        // Redirect to callback URL or home
-        window.location.href = callbackUrl;
+        // Check if user needs MFA setup or verification
+        const response = await fetch('/api/auth/session');
+        const session = await response.json();
+
+        if (session?.user?.mfaEnabled === false) {
+          // First time login - redirect to MFA setup
+          window.location.href = '/mfa/setup';
+        } else if (session?.user?.mfaEnabled && !session?.user?.mfaVerified) {
+          // MFA enabled but not verified - redirect to verification
+          const verifyUrl = `/mfa/verify${callbackUrl !== '/' ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`;
+          window.location.href = verifyUrl;
+        } else {
+          // No MFA or already verified - redirect to callback URL
+          window.location.href = callbackUrl;
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');

@@ -225,3 +225,163 @@ export async function getUserCount(): Promise<number> {
     );
   }
 }
+
+/**
+ * Update user MFA settings
+ * Enables/disables MFA and stores encrypted secret
+ */
+export async function updateUserMFA(
+  userId: string,
+  data: {
+    mfaEnabled: boolean;
+    mfaSecret: string | null;
+  }
+): Promise<User> {
+  try {
+    return await retryWithBackoff(async () => {
+      return await prisma.user.update({
+        where: { id: userId },
+        data: {
+          mfaEnabled: data.mfaEnabled,
+          mfaSecret: data.mfaSecret,
+        },
+      });
+    });
+  } catch (error: unknown) {
+    if (isPrismaError(error)) {
+      console.error('Failed to update user MFA:', {
+        error: error.message,
+        code: error.code,
+        userId
+      });
+      throw new DatabaseError(
+        'Failed to update MFA settings',
+        error.code,
+        error
+      );
+    }
+    throw new DatabaseError(
+      'Failed to update MFA settings',
+      undefined,
+      error instanceof Error ? error : new Error(String(error))
+    );
+  }
+}
+
+/**
+ * Create backup codes for a user
+ * Replaces existing codes with new ones
+ */
+export async function createBackupCodes(
+  userId: string,
+  hashedCodes: string[]
+): Promise<void> {
+  try {
+    await retryWithBackoff(async () => {
+      return await prisma.$transaction(async (tx) => {
+        // Delete existing backup codes
+        await tx.backupCode.deleteMany({
+          where: { userId },
+        });
+
+        // Create new backup codes
+        await tx.backupCode.createMany({
+          data: hashedCodes.map(code => ({
+            userId,
+            code,
+          })),
+        });
+      });
+    });
+  } catch (error: unknown) {
+    if (isPrismaError(error)) {
+      console.error('Failed to create backup codes:', {
+        error: error.message,
+        code: error.code,
+        userId
+      });
+      throw new DatabaseError(
+        'Failed to create backup codes',
+        error.code,
+        error
+      );
+    }
+    throw new DatabaseError(
+      'Failed to create backup codes',
+      undefined,
+      error instanceof Error ? error : new Error(String(error))
+    );
+  }
+}
+
+/**
+ * Get unused backup codes for a user
+ */
+export async function getUnusedBackupCodes(userId: string) {
+  try {
+    return await retryWithBackoff(async () => {
+      return await prisma.backupCode.findMany({
+        where: {
+          userId,
+          used: false,
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      });
+    });
+  } catch (error: unknown) {
+    if (isPrismaError(error)) {
+      console.error('Failed to get backup codes:', {
+        error: error.message,
+        code: error.code,
+        userId
+      });
+      throw new DatabaseError(
+        'Failed to retrieve backup codes',
+        error.code,
+        error
+      );
+    }
+    throw new DatabaseError(
+      'Failed to retrieve backup codes',
+      undefined,
+      error instanceof Error ? error : new Error(String(error))
+    );
+  }
+}
+
+/**
+ * Mark a backup code as used
+ */
+export async function markBackupCodeUsed(codeId: string): Promise<void> {
+  try {
+    await retryWithBackoff(async () => {
+      await prisma.backupCode.update({
+        where: { id: codeId },
+        data: {
+          used: true,
+          usedAt: new Date(),
+        },
+      });
+    });
+  } catch (error: unknown) {
+    if (isPrismaError(error)) {
+      console.error('Failed to mark backup code as used:', {
+        error: error.message,
+        code: error.code,
+        codeId
+      });
+      throw new DatabaseError(
+        'Failed to mark backup code as used',
+        error.code,
+        error
+      );
+    }
+    throw new DatabaseError(
+      'Failed to mark backup code as used',
+      undefined,
+      error instanceof Error ? error : new Error(String(error))
+    );
+  }
+}
