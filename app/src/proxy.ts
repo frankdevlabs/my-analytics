@@ -4,7 +4,9 @@
  * This proxy implements:
  * 1. Tracker.js serving logic (preserved from original implementation)
  * 2. Route-based authentication checks using NextAuth.js JWT tokens
- * 3. Automatic redirect to login for unauthenticated users
+ * 3. MFA (Multi-Factor Authentication) enforcement
+ * 4. Automatic redirect to login for unauthenticated users
+ * 5. Automatic redirect to MFA verification for unverified users
  *
  * Security Model: Opt-out (all routes protected by default, except explicitly public routes)
  *
@@ -35,8 +37,16 @@ export const proxy = auth(async function middleware(request) {
   // Define public routes that don't require authentication
   const publicRoutes = ['/login', '/api/track', '/api/metrics', '/tracker.min.js', '/fb-a7k2.js'];
 
+  // Define MFA routes that should be accessible during MFA setup/verification
+  const mfaRoutes = ['/mfa/setup', '/mfa/verify'];
+
   // Check if current path is a public route
   const isPublicRoute = publicRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  // Check if current path is an MFA route
+  const isMfaRoute = mfaRoutes.some((route) =>
     pathname.startsWith(route)
   );
 
@@ -57,7 +67,23 @@ export const proxy = auth(async function middleware(request) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // User is authenticated, allow access
+  // User is authenticated - now check MFA status
+  const { mfaEnabled, mfaVerified } = request.auth.user;
+
+  // If MFA is enabled but not verified
+  if (mfaEnabled && !mfaVerified) {
+    // Allow access to MFA routes for verification
+    if (isMfaRoute) {
+      return NextResponse.next();
+    }
+
+    // Redirect all other routes to MFA verification
+    const mfaVerifyUrl = new URL('/mfa/verify', request.url);
+    mfaVerifyUrl.searchParams.set('callbackUrl', pathname);
+    return NextResponse.redirect(mfaVerifyUrl);
+  }
+
+  // User is authenticated and MFA verified (or MFA not enabled), allow access
   return NextResponse.next();
 });
 
