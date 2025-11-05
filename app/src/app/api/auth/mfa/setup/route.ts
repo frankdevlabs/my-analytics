@@ -19,7 +19,7 @@ import QRCode from 'qrcode';
  * - 401: Not authenticated
  * - 500: Server error
  */
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     // Check authentication
     const session = await auth();

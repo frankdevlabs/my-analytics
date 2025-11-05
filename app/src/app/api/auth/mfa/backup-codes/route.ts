@@ -19,7 +19,7 @@ import { createBackupCodes } from 'lib/db/users';
  * - 401: Not authenticated or MFA not enabled
  * - 500: Server error
  */
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     // Check authentication
     const session = await auth();

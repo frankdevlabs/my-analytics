@@ -93,7 +93,7 @@ export function BackupCodes({ codes }: BackupCodesProps) {
         <ul className="list-disc list-inside space-y-1">
           <li>Save these codes in a secure password manager</li>
           <li>Each code can only be used once</li>
-          <li>You won't be able to see these codes again</li>
+          <li>You won&apos;t be able to see these codes again</li>
         </ul>
       </div>
     </div>

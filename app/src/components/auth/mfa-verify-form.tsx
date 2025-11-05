@@ -57,8 +57,9 @@ export function MFAVerifyForm({ callbackUrl = '/' }: MFAVerifyFormProps) {
       // Redirect to callback URL
       router.push(callbackUrl);
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Invalid verification code. Please try again.');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Invalid verification code. Please try again.';
+      setError(errorMessage);
       console.error('MFA verification error:', err);
     } finally {
       setLoading(false);
@@ -140,7 +141,7 @@ export function MFAVerifyForm({ callbackUrl = '/' }: MFAVerifyFormProps) {
           <div className="pt-4 border-t">
             <Button
               type="button"
-              variant="link"
+              variant="ghost"
               onClick={toggleBackupCode}
               className="w-full text-sm"
             >

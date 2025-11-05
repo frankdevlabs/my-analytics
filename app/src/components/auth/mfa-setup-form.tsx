@@ -89,8 +89,9 @@ export function MFASetupForm() {
       // Store backup codes and move to complete step
       setBackupCodes(data.backupCodes);
       setStep('complete');
-    } catch (err: any) {
-      setError(err.message || 'Invalid verification code. Please try again.');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Invalid verification code. Please try again.';
+      setError(errorMessage);
       console.error('MFA verification error:', err);
     } finally {
       setLoading(false);
@@ -166,6 +167,7 @@ export function MFASetupForm() {
           <>
             {/* QR Code */}
             <div className="flex justify-center py-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={setupData.qrCode}
                 alt="QR Code for authenticator app"
@@ -176,7 +178,7 @@ export function MFASetupForm() {
             {/* Manual Entry */}
             <div className="space-y-2">
               <p className="text-sm font-medium">
-                Can't scan? Enter this code manually:
+                Can&apos;t scan? Enter this code manually:
               </p>
               <code className="block p-3 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono break-all">
                 {setupData.secret}
