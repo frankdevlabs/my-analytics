@@ -54,5 +54,8 @@ logs/*
 *.backup
 backups/
 
+# Allow Prisma migration files
+!prisma/migrations/**/*.sql
+
 # Redis
 dump.rdb
