@@ -113,6 +113,11 @@ jobs:
           npx prisma migrate deploy
           echo "✓ Database migrations applied"
 
+      - name: Install Redis CLI
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y redis-tools
+
       - name: Verify services
         run: |
           echo "Verifying PostgreSQL connection..."
