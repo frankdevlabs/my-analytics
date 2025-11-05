@@ -1,0 +1,4 @@
+datapoint,uuid,added_iso,session_id,hostname,path,query,document_referrer,device_type,browser_name,browser_version,os_name,os_version,viewport_width,viewport_height,screen_width,screen_height,lang_language,timezone,country_code,utm_source,utm_medium,utm_campaign,utm_content,utm_term,duration_seconds,scrolled_percentage,is_unique,is_robot,user_agent
+pageview,clh7p1q8b0000qzrmn1h2w3x1,,sess_001,example.com,/invalid-1,,,desktop,Chrome,120.0.0.0,Windows,10,1920,1080,1920,1080,en-US,America/New_York,US,,,,,,45,75,true,false,Mozilla/5.0
+pageview,clh7p1q8b0000qzrmn1h2w3x2,2025-11-01T10:05:00Z,sess_002,example.com,invalid-path-2,,,desktop,Chrome,120.0.0.0,Windows,10,1920,1080,1920,1080,en-US,America/New_York,US,,,,,,30,50,true,false,Mozilla/5.0
+pageview,clh7p1q8b0000qzrmn1h2w3x3,invalid-timestamp,sess_003,example.com,/invalid-3,,,desktop,Chrome,120.0.0.0,Windows,10,1920,1080,1920,1080,en-US,America/New_York,US,,,,,,60,85,false,false,Mozilla/5.0

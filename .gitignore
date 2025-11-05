@@ -48,6 +48,8 @@ dump.rdb
 
 # Test artifacts
 test/
+!test/fixtures/
+!test/fixtures/**
 
 # Development tools
 agent-os/
