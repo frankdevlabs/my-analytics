@@ -70,7 +70,22 @@ export const proxy = auth(async function middleware(request) {
   // User is authenticated - now check MFA status
   const { mfaEnabled, mfaVerified } = request.auth.user;
 
-  // If MFA is enabled but not verified
+  // SECURITY GATE 1: Force MFA setup for users who haven't set it up yet
+  // This prevents users from accessing the dashboard without MFA configured
+  if (!mfaEnabled) {
+    // Allow access to MFA setup route itself
+    if (pathname === '/mfa/setup') {
+      return NextResponse.next();
+    }
+
+    // Redirect all other routes to MFA setup
+    const mfaSetupUrl = new URL('/mfa/setup', request.url);
+    mfaSetupUrl.searchParams.set('callbackUrl', pathname);
+    return NextResponse.redirect(mfaSetupUrl);
+  }
+
+  // SECURITY GATE 2: Force MFA verification for users who have MFA but haven't verified this session
+  // This ensures users verify their identity every time they log in
   if (mfaEnabled && !mfaVerified) {
     // Allow access to MFA routes for verification
     if (isMfaRoute) {
@@ -83,7 +98,7 @@ export const proxy = auth(async function middleware(request) {
     return NextResponse.redirect(mfaVerifyUrl);
   }
 
-  // User is authenticated and MFA verified (or MFA not enabled), allow access
+  // User is authenticated, has MFA setup, and has verified this session - allow access
   return NextResponse.next();
 });
 

@@ -27,12 +27,18 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  // CRITICAL SECURITY CHECK: Enforce MFA verification
-  // If user has MFA enabled but hasn't verified it yet, redirect to verification
+  // SECURITY GATE 1: Enforce MFA setup for users who haven't configured it
+  // This provides defense-in-depth alongside proxy middleware
+  if (!session.user.mfaEnabled) {
+    redirect('/mfa/setup');
+  }
+
+  // SECURITY GATE 2: Enforce MFA verification for users with MFA enabled
+  // If user has MFA enabled but hasn't verified this session, redirect to verification
   if (session.user.mfaEnabled && !session.user.mfaVerified) {
     redirect('/mfa/verify');
   }
 
-  // Render children for authenticated and MFA-verified users
+  // Render children for authenticated, MFA-configured, and MFA-verified users
   return <>{children}</>;
 }
