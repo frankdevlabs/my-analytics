@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from 'lib/auth/config';
 import { verifyToken, encryptSecret } from 'lib/auth/mfa';
 import { generateBackupCodes, formatCodesForDisplay } from 'lib/auth/backup-codes';
-import { updateUserMFA, createBackupCodes } from 'lib/db/users';
+import { updateUserMFA, createBackupCodes, getUserByEmail } from 'lib/db/users';
 import { mfaSetupSchema } from 'lib/validation/mfa';
 
 /**
@@ -71,6 +71,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get user from database to ensure we have the correct user ID
+    const user = await getUserByEmail(session.user.email);
+
+    if (!user) {
+      console.error('User not found in database:', {
+        sessionUserId: session.user.id,
+        sessionUserEmail: session.user.email
+      });
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    console.log('MFA verify-setup: User fetched from database:', {
+      userId: user.id,
+      email: user.email,
+      sessionUserId: session.user.id,
+      idsMatch: user.id === session.user.id
+    });
+
     // Encrypt secret for storage
     const encryptedSecret = encryptSecret(secret);
 
@@ -78,19 +99,19 @@ export async function POST(request: NextRequest) {
     const backupCodesData = await generateBackupCodes(10);
     const hashedCodes = backupCodesData.map(bc => bc.hashedCode);
 
-    // Update user with MFA enabled and encrypted secret
-    await updateUserMFA(session.user.id, {
+    // Update user with MFA enabled and encrypted secret (use DB user ID, not session ID)
+    await updateUserMFA(user.id, {
       mfaEnabled: true,
       mfaSecret: encryptedSecret,
     });
 
-    // Store backup codes
-    await createBackupCodes(session.user.id, hashedCodes);
+    // Store backup codes (use DB user ID, not session ID)
+    await createBackupCodes(user.id, hashedCodes);
 
     // Format backup codes for display (only shown once)
     const displayCodes = formatCodesForDisplay(backupCodesData);
 
-    console.log('MFA enabled successfully for user:', session.user.id);
+    console.log('MFA enabled successfully for user:', user.id);
 
     return NextResponse.json({
       message: 'MFA enabled successfully',
