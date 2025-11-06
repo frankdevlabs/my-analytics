@@ -80,9 +80,11 @@ export const authConfig: NextAuthConfig = {
         token.email = user.email;
         token.name = user.name;
         token.mfaEnabled = user.mfaEnabled;
-        // Initially set mfaVerified to false if MFA is enabled
-        // This will be set to true after successful MFA verification
-        token.mfaVerified = user.mfaEnabled ? false : true;
+        // SECURITY: All users must verify/setup MFA on every login
+        // Users without MFA (mfaEnabled=false) will be redirected to setup
+        // Users with MFA (mfaEnabled=true) will be redirected to verify
+        // This prevents bypass where users without MFA appear as verified
+        token.mfaVerified = false;
       }
 
       // Allow manual token updates for MFA verification
