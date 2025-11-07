@@ -179,6 +179,8 @@ describe('Proxy', () => {
           id: 'user123',
           email: 'user@example.com',
           name: 'Test User',
+          mfaEnabled: true,
+          mfaVerified: true,
         },
       };
       const request = createMockRequest('/dashboard', undefined, mockAuth);
@@ -197,6 +199,8 @@ describe('Proxy', () => {
           id: 'user123',
           email: 'user@example.com',
           name: 'Test User',
+          mfaEnabled: true,
+          mfaVerified: true,
         },
       };
       const request = createMockRequest('/', undefined, mockAuth);
@@ -214,6 +218,8 @@ describe('Proxy', () => {
           id: 'user123',
           email: 'user@example.com',
           name: 'Test User',
+          mfaEnabled: true,
+          mfaVerified: true,
         },
       };
       const request = createMockRequest('/settings/profile', undefined, mockAuth);
