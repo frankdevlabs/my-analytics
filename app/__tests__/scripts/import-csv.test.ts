@@ -11,7 +11,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 describe('CSV Import CLI Script', () => {
-  const testFixturesDir = path.join(__dirname, '../fixtures/csv-import');
+  const testFixturesDir = path.join(__dirname, '../../scripts/__tests__/fixtures/csv-import');
 
   beforeEach(() => {
     // Create test fixtures directory

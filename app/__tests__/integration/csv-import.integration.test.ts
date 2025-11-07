@@ -19,8 +19,8 @@ import { insertPageviewBatch } from '../../lib/import/batch-inserter';
 import { LogManager } from '../../lib/import/log-manager';
 import { prisma } from '../../lib/db/prisma';
 
-const fixturesDir = path.join(__dirname, '../../../test/fixtures/csv-import');
-const testLogsDir = path.join(__dirname, '../../../test/fixtures/logs');
+const fixturesDir = path.join(__dirname, '../../scripts/__tests__/fixtures/csv-import');
+const testLogsDir = path.join(__dirname, '../../scripts/__tests__/fixtures/logs');
 
 describe('CSV Import Integration Tests', () => {
   let transactionSpy: jest.SpyInstance;
