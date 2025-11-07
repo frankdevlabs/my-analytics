@@ -5,17 +5,30 @@
  * and database layer for the Top Pages Performance Dashboard feature.
  */
 
+// Mock authentication before imports
+jest.mock('../../../lib/auth/config', () => ({
+  auth: jest.fn(() => Promise.resolve({
+    user: {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      name: 'Test User',
+      mfaEnabled: true,
+      mfaVerified: true,
+    },
+  })),
+}));
+
+// Mock database function
+jest.mock('lib/db/pageviews', () => ({
+  getTopPages: jest.fn(),
+}));
+
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { getTopPages } from 'lib/db/pageviews';
 import { TopPagesDashboardSection } from '@/components/dashboard/TopPagesDashboardSection';
 import { GET } from '@/app/api/top-pages/route';
 import { NextRequest } from 'next/server';
-
-// Mock database function
-jest.mock('lib/db/pageviews', () => ({
-  getTopPages: jest.fn(),
-}));
 
 // Mock fetch for client-side API calls
 global.fetch = jest.fn();

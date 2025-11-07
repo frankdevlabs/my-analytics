@@ -3,6 +3,19 @@
  * Tests the /api/referrer-urls endpoint with real database interactions
  */
 
+// Mock authentication before imports
+jest.mock('../../lib/auth/config', () => ({
+  auth: jest.fn(() => Promise.resolve({
+    user: {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      name: 'Test User',
+      mfaEnabled: true,
+      mfaVerified: true,
+    },
+  })),
+}));
+
 import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/referrer-urls/route';
 import * as pageviewsDb from 'lib/db/pageviews';

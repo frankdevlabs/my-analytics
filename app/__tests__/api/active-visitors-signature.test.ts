@@ -4,6 +4,19 @@
  * Verifies that getActiveVisitors() accepts zero arguments
  */
 
+// Mock authentication
+jest.mock('../../lib/auth/config', () => ({
+  auth: jest.fn(() => Promise.resolve({
+    user: {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      name: 'Test User',
+      mfaEnabled: true,
+      mfaVerified: true,
+    },
+  })),
+}));
+
 import { GET as getActiveVisitors } from '../../src/app/api/active-visitors/route';
 
 describe('Active Visitors API Signature', () => {

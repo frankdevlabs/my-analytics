@@ -12,6 +12,7 @@
 
 import { NextResponse } from 'next/server';
 import { getActiveVisitorCount } from '@/lib/active-visitors/active-visitor-tracking';
+import { auth } from '@/lib/auth/config';
 
 /**
  * GET /api/active-visitors
@@ -27,10 +28,39 @@ import { getActiveVisitorCount } from '@/lib/active-visitors/active-visitor-trac
  *
  * Status codes:
  * - 200: Success (includes successful error state with count: null)
+ * - 401: Not authenticated or MFA not verified
  * - 500: Unexpected server error
+ *
+ * Requires authentication and MFA verification
  */
 export async function GET() {
   try {
+    // Check authentication
+    const session = await auth();
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
+
+    // Check if MFA is enabled
+    if (!session.user.mfaEnabled) {
+      return NextResponse.json(
+        { error: 'MFA is not enabled for this account' },
+        { status: 401 }
+      );
+    }
+
+    // Check if MFA is verified in this session
+    if (!session.user.mfaVerified) {
+      return NextResponse.json(
+        { error: 'MFA verification required' },
+        { status: 401 }
+      );
+    }
+
     // Get active visitor count from Redis
     // Returns null if Redis unavailable (graceful degradation)
     const count = await getActiveVisitorCount();
