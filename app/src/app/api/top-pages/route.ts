@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getTopPages } from 'lib/db/pageviews';
+import { auth } from 'lib/auth/config';
 
 /**
  * GET /api/top-pages
@@ -15,9 +16,37 @@ import { getTopPages } from 'lib/db/pageviews';
  * - from: Start date (YYYY-MM-DD or ISO 8601)
  * - to: End date (YYYY-MM-DD or ISO 8601)
  * - limit: Number of pages to return (default: 50, max: 100)
+ *
+ * Requires authentication and MFA verification
  */
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication
+    const session = await auth();
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
+
+    // Check if MFA is enabled
+    if (!session.user.mfaEnabled) {
+      return NextResponse.json(
+        { error: 'MFA is not enabled for this account' },
+        { status: 401 }
+      );
+    }
+
+    // Check if MFA is verified in this session
+    if (!session.user.mfaVerified) {
+      return NextResponse.json(
+        { error: 'MFA verification required' },
+        { status: 401 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const from = searchParams.get('from');
     const to = searchParams.get('to');

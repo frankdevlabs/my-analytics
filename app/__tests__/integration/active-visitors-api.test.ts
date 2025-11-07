@@ -3,6 +3,19 @@
  * Tests the /api/active-visitors and /api/track endpoints for Redis-based active visitor tracking
  */
 
+// Mock authentication before imports
+jest.mock('../../lib/auth/config', () => ({
+  auth: jest.fn(() => Promise.resolve({
+    user: {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      name: 'Test User',
+      mfaEnabled: true,
+      mfaVerified: true,
+    },
+  })),
+}));
+
 import { NextRequest } from 'next/server';
 import { prisma } from 'lib/db/prisma';
 import { getRedisClient, getRedisKey } from 'lib/redis';

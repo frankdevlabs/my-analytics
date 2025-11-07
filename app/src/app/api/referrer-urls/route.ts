@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getReferrerUrlsByDomain } from '@/lib/db/pageviews';
+import { auth } from '@/lib/auth/config';
 
 /**
  * GET /api/referrer-urls
@@ -16,9 +17,37 @@ import { getReferrerUrlsByDomain } from '@/lib/db/pageviews';
  * - from: Start date (YYYY-MM-DD or ISO 8601)
  * - to: End date (YYYY-MM-DD or ISO 8601)
  * - limit: Number of URLs to return (default: 100, max: 100)
+ *
+ * Requires authentication and MFA verification
  */
 export async function GET(request: NextRequest) {
   try {
+    // Check authentication
+    const session = await auth();
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
+
+    // Check if MFA is enabled
+    if (!session.user.mfaEnabled) {
+      return NextResponse.json(
+        { error: 'MFA is not enabled for this account' },
+        { status: 401 }
+      );
+    }
+
+    // Check if MFA is verified in this session
+    if (!session.user.mfaVerified) {
+      return NextResponse.json(
+        { error: 'MFA verification required' },
+        { status: 401 }
+      );
+    }
+
     // Get search params from URL
     const url = new URL(request.url);
     const searchParams = url.searchParams;

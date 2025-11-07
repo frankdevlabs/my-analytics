@@ -9,6 +9,19 @@
  * 5. Redis cleanup and count accuracy across multiple operations
  */
 
+// Mock authentication before imports
+jest.mock('../../lib/auth/config', () => ({
+  auth: jest.fn(() => Promise.resolve({
+    user: {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      name: 'Test User',
+      mfaEnabled: true,
+      mfaVerified: true,
+    },
+  })),
+}));
+
 import { NextRequest } from 'next/server';
 import { prisma } from 'lib/db/prisma';
 import { getRedisClient, getRedisKey } from 'lib/redis';

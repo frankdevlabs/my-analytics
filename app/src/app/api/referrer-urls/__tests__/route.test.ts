@@ -3,12 +3,25 @@
  * Tests for referrer URLs by domain endpoint
  */
 
-import { NextRequest } from 'next/server';
-import { GET } from '../route';
-import { getReferrerUrlsByDomain } from '@/lib/db/pageviews';
+// Mock authentication before imports
+jest.mock('../../../../lib/auth/config', () => ({
+  auth: jest.fn(() => Promise.resolve({
+    user: {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      name: 'Test User',
+      mfaEnabled: true,
+      mfaVerified: true,
+    },
+  })),
+}));
 
 // Mock dependencies
 jest.mock('lib/db/pageviews');
+
+import { NextRequest } from 'next/server';
+import { GET } from '../route';
+import { getReferrerUrlsByDomain } from '@/lib/db/pageviews';
 
 const mockGetReferrerUrlsByDomain = getReferrerUrlsByDomain as jest.MockedFunction<
   typeof getReferrerUrlsByDomain

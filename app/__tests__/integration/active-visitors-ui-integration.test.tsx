@@ -11,6 +11,19 @@
  * Note: Uses real timers to test actual polling behavior.
  */
 
+// Mock authentication before imports
+jest.mock('../../lib/auth/config', () => ({
+  auth: jest.fn(() => Promise.resolve({
+    user: {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      name: 'Test User',
+      mfaEnabled: true,
+      mfaVerified: true,
+    },
+  })),
+}));
+
 import * as React from 'react';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { render, screen, waitFor, act, cleanup } from '@testing-library/react';
