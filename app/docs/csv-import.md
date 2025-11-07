@@ -612,8 +612,10 @@ npm run import:csv -- ./examples/sample-import.csv
 - `/Users/frankdevlab/WebstormProjects/my-analytics/app/lib/import/log-manager.ts` - Logging functionality
 
 ### Test Files
-- `/Users/frankdevlab/WebstormProjects/my-analytics/test/fixtures/csv-import/` - Test CSV files
-- `/Users/frankdevlab/WebstormProjects/my-analytics/test/lib/import/` - Unit tests
+- `app/scripts/__tests__/fixtures/csv-import/` - Test CSV files for import script validation
+- `app/__tests__/scripts/` - Script unit tests
+- `app/__tests__/integration/` - Integration tests
+- `app/lib/import/__tests__/` - Import library unit tests
 
 ### Schema Files
 - `/Users/frankdevlab/WebstormProjects/my-analytics/app/lib/validation/pageview-schema.ts` - Zod validation schema
