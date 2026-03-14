@@ -938,12 +938,18 @@ export async function getAveragePageviewsPerDay(
 
   try {
     return await retryWithBackoff(async () => {
-      let whereClause = {
+      const whereClause: {
+        added_iso: {
+          gte: Date;
+          lte: Date;
+        };
+        website_id?: string;
+      } = {
         added_iso: {
           gte: startDate,
           lte: endDate,
         },
-      } as any;
+      };
 
       if (websiteId) {
         whereClause.website_id = websiteId;

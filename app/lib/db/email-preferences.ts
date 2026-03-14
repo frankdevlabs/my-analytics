@@ -3,7 +3,7 @@
  * Handles CRUD operations for email preference settings
  */
 
-import { PrismaClient, EmailPreference, EmailSchedule, Prisma } from '@prisma/client';
+import { PrismaClient, EmailPreference, EmailSchedule } from '@prisma/client';
 import { prisma as defaultPrisma } from './prisma';
 import { retryWithBackoff, DatabaseError } from './pageviews';
 
@@ -121,7 +121,7 @@ export async function createOrUpdatePreference(
     downtimeAlertEnabled?: boolean;
     downtimeThresholdMinutes?: number | null;
     alertCooldownHours?: number;
-    templateConfig?: any;
+    templateConfig?: unknown;
   },
   prismaClient?: PrismaClient
 ): Promise<EmailPreference> {
