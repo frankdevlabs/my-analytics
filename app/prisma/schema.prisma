@@ -47,6 +47,8 @@ model Pageview {
   referrer_domain       String?    @db.VarChar(255)
   referrer_category     String?    @db.VarChar(50)
   browser_major_version String?    @db.VarChar(10)
+  website_id            String?    @map("website_id")
+  website               Website?   @relation(fields: [website_id], references: [id])
   events                Event[]
 
   @@index([added_iso], map: "idx_pageviews_timestamp")
@@ -59,6 +61,7 @@ model Pageview {
   @@index([referrer_category, added_iso], map: "idx_pageviews_referrer_category")
   @@index([device_type, added_iso], map: "idx_pageviews_device_timestamp")
   @@index([browser_name, added_iso], map: "idx_pageviews_browser_timestamp")
+  @@index([website_id], map: "idx_pageviews_website_id")
   @@map("pageviews")
 }
 
@@ -110,4 +113,78 @@ enum DeviceType {
   desktop
   mobile
   tablet
+}
+
+enum EmailSchedule {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum EmailType {
+  DAILY_REPORT
+  WEEKLY_REPORT
+  MONTHLY_REPORT
+  TRAFFIC_SPIKE
+  DOWNTIME
+}
+
+enum EmailStatus {
+  SENT
+  FAILED
+}
+
+model Website {
+  id                  String               @id @default(cuid())
+  domain              String               @db.VarChar(255)
+  userId              String
+  apiKey              String               @unique @db.VarChar(255)
+  createdAt           DateTime             @default(now()) @db.Timestamptz(3)
+  pageviews           Pageview[]
+  emailPreferences    EmailPreference[]
+  emailDeliveryLogs   EmailDeliveryLog[]
+
+  @@index([userId], map: "idx_websites_user_id")
+  @@index([apiKey], map: "idx_websites_api_key")
+  @@map("websites")
+}
+
+model EmailPreference {
+  id                       String        @id @default(cuid())
+  userId                   String
+  websiteId                String?
+  reportSchedule           EmailSchedule?
+  reportEnabled            Boolean       @default(false)
+  spikeAlertEnabled        Boolean       @default(false)
+  spikeThreshold           Int?
+  lastSpikeTriggeredAt     DateTime?     @db.Timestamptz(3)
+  downtimeAlertEnabled     Boolean       @default(false)
+  downtimeThresholdMinutes Int?
+  lastDowntimeTriggeredAt  DateTime?     @db.Timestamptz(3)
+  alertCooldownHours       Int           @default(1)
+  templateConfig           Json?
+  createdAt                DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime      @updatedAt @db.Timestamptz(3)
+  website                  Website?      @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_email_preferences_user_id")
+  @@index([websiteId], map: "idx_email_preferences_website_id")
+  @@map("email_preferences")
+}
+
+model EmailDeliveryLog {
+  id             String      @id @default(cuid())
+  userId         String
+  websiteId      String?
+  emailType      EmailType
+  recipientEmail String      @db.VarChar(255)
+  sentAt         DateTime    @default(now()) @db.Timestamptz(3)
+  status         EmailStatus
+  errorMessage   String?
+  website        Website?    @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_email_logs_user_id")
+  @@index([sentAt], map: "idx_email_logs_sent_at")
+  @@index([status], map: "idx_email_logs_status")
+  @@map("email_delivery_logs")
 }
