@@ -23,9 +23,18 @@ export class EmailSendError extends Error {
 }
 
 /**
- * Initialize Resend client with API key
+ * Lazily initialized Resend client.
+ * Deferred so the module can load even when RESEND_API_KEY is not yet set;
+ * the key is checked at send-time in sendEmail().
  */
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+
+function getResendClient(): Resend {
+  if (!_resend) {
+    _resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return _resend;
+}
 
 /**
  * Email send parameters
@@ -162,7 +171,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
 
     // Send email with retry logic
     const result = await retryEmailSend(async () => {
-      return await resend.emails.send({
+      return await getResendClient().emails.send({
         from: 'My Analytics <noreply@myanalytics.com>',
         to,
         subject,

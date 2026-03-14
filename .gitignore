@@ -66,3 +66,4 @@ app/data/*.csv
 
 DEPLOYMENT.md
 GATSBY_INTEGRATION.md
+.last_deploy_commit

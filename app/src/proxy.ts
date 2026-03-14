@@ -35,7 +35,7 @@ export const proxy = auth(async function middleware(request) {
   }
 
   // Define public routes that don't require authentication
-  const publicRoutes = ['/login', '/api/track', '/api/metrics', '/tracker.min.js', '/fb-a7k2.js'];
+  const publicRoutes = ['/login', '/api/track', '/api/metrics', '/api/health', '/tracker.min.js', '/fb-a7k2.js'];
 
   // Define MFA routes that should be accessible during MFA setup/verification
   const mfaRoutes = ['/mfa/setup', '/mfa/verify'];
