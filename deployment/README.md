@@ -20,7 +20,7 @@ Cloudflare CDN (Edge)
         ↓ (mTLS + IP Whitelist)
     Nginx (Reverse Proxy)
         ↓ (localhost:3000)
-    Next.js App (Node.js v20.10.0)
+    Next.js App (Node.js v24.11.0)
         ↓
     PostgreSQL (Docker) + Redis (Docker)
 ```
@@ -37,7 +37,7 @@ Cloudflare CDN (Edge)
 
 - **OS**: Ubuntu 22.04 LTS or later
 - **Web Server**: Nginx 1.18+ (reverse proxy)
-- **Runtime**: Node.js v20.10.0 (via NVM)
+- **Runtime**: Node.js v24.11.0 (via NVM)
 - **Process Manager**: systemd
 - **Database**: PostgreSQL 17.6 (Docker)
 - **Cache**: Redis 7.4 (Docker)
@@ -113,7 +113,7 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y git curl wget build-essential ufw nginx certbot
 ```
 
-### Step 2: Install Node.js v20.10.0
+### Step 2: Install Node.js v24.11.0
 
 ```bash
 # Install NVM
@@ -123,14 +123,14 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-# Install Node.js v20.10.0
-nvm install 20.10.0
-nvm use 20.10.0
-nvm alias default 20.10.0
+# Install Node.js v24.11.0
+nvm install 24.11.0
+nvm use 24.11.0
+nvm alias default 24.11.0
 
 # Verify
-node --version  # Should output: v20.10.0
-npm --version   # Should output: v10.2.3 or similar
+node --version  # Should output: v24.11.0
+npm --version   # Should output: v10.11.0 or similar
 ```
 
 ### Step 3: Install Docker & Docker Compose

@@ -111,10 +111,10 @@ done
 # ============================================================================
 # 3. Install Node.js via NVM
 # ============================================================================
-print_header "Step 3: Installing Node.js v20.10.0 via NVM"
+print_header "Step 3: Installing Node.js v24.11.0 via NVM"
 
 NVM_VERSION="v0.39.0"
-NODE_VERSION="20.10.0"
+NODE_VERSION="24.11.0"
 
 # Check if NVM is already installed
 if su - "$ACTUAL_USER" -c "[ -s ~/.nvm/nvm.sh ]"; then
