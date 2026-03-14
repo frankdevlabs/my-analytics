@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from 'lib/auth/config';
 import { z } from 'zod';
-import { EmailSchedule } from '@prisma/client';
+import { EmailSchedule, Prisma } from '@prisma/client';
 import {
   getAllEmailPreferences,
   createOrUpdatePreference,
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
       downtimeAlertEnabled: data.downtimeAlertEnabled,
       downtimeThresholdMinutes: data.downtimeThresholdMinutes || null,
       alertCooldownHours: data.alertCooldownHours ?? 1,
-      templateConfig: data.templateConfig || null,
+      templateConfig: data.templateConfig || Prisma.JsonNull,
     });
 
     return NextResponse.json(preference, { status: 201 });

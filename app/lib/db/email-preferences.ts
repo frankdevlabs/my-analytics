@@ -3,7 +3,7 @@
  * Handles CRUD operations for email preference settings
  */
 
-import { PrismaClient, EmailPreference, EmailSchedule } from '@prisma/client';
+import { PrismaClient, EmailPreference, EmailSchedule, Prisma } from '@prisma/client';
 import { prisma as defaultPrisma } from './prisma';
 import { retryWithBackoff, DatabaseError } from './pageviews';
 
@@ -121,7 +121,7 @@ export async function createOrUpdatePreference(
     downtimeAlertEnabled?: boolean;
     downtimeThresholdMinutes?: number | null;
     alertCooldownHours?: number;
-    templateConfig?: unknown;
+    templateConfig?: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput;
   },
   prismaClient?: PrismaClient
 ): Promise<EmailPreference> {
@@ -139,12 +139,14 @@ export async function createOrUpdatePreference(
 
       if (existing) {
         // Update existing
+        // Omit userId and websiteId from the update data as they shouldn't be changed
+        const { userId: _userId, websiteId: _websiteId, ...updateData } = data;
         return await client.emailPreference.update({
           where: {
             id: existing.id,
           },
           data: {
-            ...data,
+            ...updateData,
             updatedAt: new Date(),
           },
         });
