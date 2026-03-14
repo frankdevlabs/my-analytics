@@ -6,7 +6,7 @@
  */
 
 // Mock authentication before imports
-jest.mock('../../../lib/auth/config', () => ({
+jest.mock('../../../../lib/auth/config', () => ({
   auth: jest.fn(() => Promise.resolve({
     user: {
       id: 'test-user-id',

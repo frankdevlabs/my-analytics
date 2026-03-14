@@ -52,7 +52,7 @@ function isPrismaError(error: unknown): error is PrismaError {
 /**
  * Retry helper with exponential backoff for transient database failures
  */
-async function retryWithBackoff<T>(
+export async function retryWithBackoff<T>(
   operation: () => Promise<T>,
   maxRetries: number = 3,
   initialDelayMs: number = 100
@@ -919,5 +919,50 @@ export async function getBrowserBreakdown(
       isPrismaError(error) ? error.code : undefined,
       error instanceof Error ? error : undefined
     );
+  }
+}
+
+/**
+ * Get average pageviews per day for a website
+ * @param websiteId - Website ID (or null for all sites)
+ * @param days - Number of days to calculate average for
+ * @returns Average pageviews per day
+ */
+export async function getAveragePageviewsPerDay(
+  websiteId: string | null,
+  days: number = 7
+): Promise<number> {
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  try {
+    return await retryWithBackoff(async () => {
+      let whereClause = {
+        added_iso: {
+          gte: startDate,
+          lte: endDate,
+        },
+      } as any;
+
+      if (websiteId) {
+        whereClause.website_id = websiteId;
+      }
+
+      const totalPageviews = await prisma.pageview.count({
+        where: whereClause,
+      });
+
+      // Calculate average per day
+      const averagePerDay = totalPageviews / days;
+      return averagePerDay;
+    });
+  } catch (error) {
+    console.error('Failed to get average pageviews per day:', error);
+    if (error instanceof DatabaseError) {
+      throw error;
+    } else {
+      throw new DatabaseError('Failed to get average pageviews per day', 'QUERY_FAILED', error as Error);
+    }
   }
 }

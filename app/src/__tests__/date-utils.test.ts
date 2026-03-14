@@ -86,7 +86,9 @@ describe('Date Utilities - Critical Behaviors', () => {
   });
 
   test('clampDateToLimit returns same date if within limit', () => {
-    const recentDate = new Date('2024-01-01');
+    // Use a date that's always within the 2-year limit
+    const now = new Date();
+    const recentDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()); // 6 months ago
 
     const result = clampDateToLimit(recentDate);
 
