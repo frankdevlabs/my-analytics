@@ -7,7 +7,7 @@ import { GET as getPreferences, POST as postPreferences } from '../preferences/r
 import { GET as getDeliveryLog } from '../delivery-log/route';
 import { GET as getDowntimeSuggestion } from '../downtime-suggestion/route';
 import { prisma } from '@/lib/db/prisma';
-import { auth } from '@/lib/auth/auth';
+import { auth } from '@/lib/auth/config';
 import { EmailSchedule, EmailStatus, EmailType } from '@prisma/client';
 import { NextRequest } from 'next/server';
 
@@ -34,7 +34,7 @@ jest.mock('@/lib/db/prisma', () => ({
   },
 }));
 
-jest.mock('@/lib/auth/auth', () => ({
+jest.mock('@/lib/auth/config', () => ({
   auth: jest.fn(),
 }));
 

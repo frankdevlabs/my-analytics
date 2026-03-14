@@ -232,6 +232,10 @@ install_dependencies() {
 
   execute "Install dependencies" "npm install" || exit 3
 
+  # Generate Prisma client after installing dependencies
+  # This ensures the client is available for the build step
+  execute "Generate Prisma client" "npx prisma generate" || exit 3
+
   log "SUCCESS" "Dependencies installed"
 }
 
